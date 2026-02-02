@@ -1,5 +1,5 @@
 import { _decorator, Component, Node, Label, UITransform, Widget, Color, Sprite, Size, EventTouch, Vec3, tween, UIOpacity } from 'cc';
-import { GameManager } from '../managers/GameManager';
+import { GameManager } from './managers/GameManager';
 const { ccclass, property } = _decorator;
 
 /**
