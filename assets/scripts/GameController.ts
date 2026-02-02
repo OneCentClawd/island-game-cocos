@@ -76,7 +76,7 @@ export class GameController extends Component {
             const btnNode = new Node(`Btn_${building.id}`);
             const btnTransform = btnNode.addComponent(UITransform);
             btnTransform.setContentSize(new Size(140, 100));
-            btnNode.setPosition(buttonStartX + i * buttonSpacing, 0, 0);
+            btnNode.setPosition(buttonStartX + i * buttonSpacing, 200, 0);
             console.log(`Created button ${building.name} at position`, btnNode.position);
             
             // 按钮文字
@@ -100,7 +100,7 @@ export class GameController extends Component {
         const infoNode = new Node('InfoLabel');
         const infoTransform = infoNode.addComponent(UITransform);
         infoTransform.setContentSize(new Size(600, 50));
-        infoNode.setPosition(0, 80, 0);
+        infoNode.setPosition(0, 280, 0);
         
         this._infoLabel = infoNode.addComponent(Label);
         this._infoLabel.string = '';
