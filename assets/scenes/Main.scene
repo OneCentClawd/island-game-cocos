@@ -1,0 +1,8 @@
+{
+  "__version__": "1.0.4",
+  "__type__": "cc.SceneAsset",
+  "_name": "Main",
+  "scene": {
+    "__id__": 1
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "buildings": [
+    {
+      "id": "house",
+      "name": "房屋",
+      "description": "为岛民提供住所，增加人口上限",
+      "cost": { "gold": 50, "wood": 30 },
+      "population": 2,
+      "maxLevel": 5
+    },
+    {
+      "id": "farm",
+      "name": "农场",
+      "description": "生产食物，维持岛民生存",
+      "cost": { "gold": 80, "wood": 50 },
+      "production": { "type": "food", "base": 5, "interval": 10 },
+      "maxLevel": 5
+    },
+    {
+      "id": "lumber",
+      "name": "伐木场",
+      "description": "采集木材，用于建造",
+      "cost": { "gold": 60, "wood": 20 },
+      "production": { "type": "wood", "base": 3, "interval": 8 },
+      "maxLevel": 5
+    },
+    {
+      "id": "mine",
+      "name": "矿场",
+      "description": "开采金矿，获取金币",
+      "cost": { "gold": 100, "wood": 80 },
+      "production": { "type": "gold", "base": 10, "interval": 15 },
+      "maxLevel": 5
+    },
+    {
+      "id": "shop",
+      "name": "商店",
+      "description": "购买和出售物资",
+      "cost": { "gold": 200, "wood": 100 },
+      "maxLevel": 3
+    }
+  ],
+  "initialResources": {
+    "gold": 100,
+    "wood": 50,
+    "food": 30
+  },
+  "gameSettings": {
+    "autoSaveInterval": 60,
+    "offlineProductionRate": 0.5
+  }
+}
