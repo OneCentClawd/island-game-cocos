@@ -81,10 +81,12 @@ export class GameController extends Component {
             
             // 按钮文字
             const label = btnNode.addComponent(Label);
-            label.string = `${building.emoji}\n${building.name}\n💰${building.cost.gold} 🪵${building.cost.wood}`;
-            label.fontSize = 22;
-            label.lineHeight = 28;
-            label.color = new Color(255, 255, 255, 255);
+            label.string = `${building.emoji}\n${building.name}\n💰${building.cost.gold}`;
+            label.fontSize = 32;
+            label.lineHeight = 40;
+            label.color = new Color(0, 0, 0, 255);  // 黑色文字更明显
+            
+            console.log(`Button ${building.name} label created:`, label.string);
             
             // 点击事件
             const buildingConfig = building;
