@@ -66,9 +66,8 @@ export class GameController extends Component {
         menuBg.setPosition(0, -280, 0);
         canvas.addChild(menuBg);
         
-        // 3. 创建4个建筑按钮
-        const buttonStartX = -240;
-        const buttonSpacing = 160;
+        // 3. 创建4个建筑按钮 - 放在资源标签正下方
+        const buttonY = 50;  // 资源标签在150-300，按钮放在50
         
         for (let i = 0; i < Buildings.length; i++) {
             const building = Buildings[i];
@@ -76,7 +75,8 @@ export class GameController extends Component {
             const btnNode = new Node(`Btn_${building.id}`);
             const btnTransform = btnNode.addComponent(UITransform);
             btnTransform.setContentSize(new Size(140, 100));
-            btnNode.setPosition(buttonStartX + i * buttonSpacing, 200, 0);
+            // 横向排列：-300, -100, 100, 300
+            btnNode.setPosition(-300 + i * 200, buttonY, 0);
             console.log(`Created button ${building.name} at position`, btnNode.position);
             
             // 按钮文字
@@ -84,12 +84,16 @@ export class GameController extends Component {
             label.string = `${building.emoji}\n${building.name}\n💰${building.cost.gold}`;
             label.fontSize = 32;
             label.lineHeight = 40;
-            label.color = new Color(0, 0, 0, 255);  // 黑色文字更明显
+            label.color = new Color(0, 0, 0, 255);
+            label.horizontalAlign = 1;  // 居中
+            label.verticalAlign = 1;    // 居中
+            label.overflow = 0;         // 不裁剪
+            label.useSystemFont = true; // 使用系统字体！
             
             // 设置层级到最高
             btnNode.setSiblingIndex(999);
             
-            console.log(`Button ${building.name} label created:`, label.string);
+            console.log(`Button ${building.name} created at`, btnNode.position);
             
             // 点击事件
             const buildingConfig = building;
