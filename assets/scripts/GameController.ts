@@ -33,10 +33,12 @@ export class GameController extends Component {
     private _buttons: Node[] = [];
 
     onLoad() {
+        console.log('GameController onLoad!');
         this.createUI();
     }
 
     start() {
+        console.log('GameController start!');
         this.showInfo('🏝️ 欢迎来到小岛物语！选择建筑开始建造');
     }
 
