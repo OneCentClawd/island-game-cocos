@@ -86,6 +86,9 @@ export class GameController extends Component {
             label.lineHeight = 40;
             label.color = new Color(0, 0, 0, 255);  // 黑色文字更明显
             
+            // 设置层级到最高
+            btnNode.setSiblingIndex(999);
+            
             console.log(`Button ${building.name} label created:`, label.string);
             
             // 点击事件
