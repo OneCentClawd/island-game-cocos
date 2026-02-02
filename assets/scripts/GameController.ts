@@ -47,12 +47,13 @@ export class GameController extends Component {
      */
     createUI() {
         const canvas = this.node;
+        console.log('createUI called, canvas:', canvas.name);
         
         // 1. 创建建造区域（可点击的透明区域）
         this._buildArea = new Node('BuildArea');
         const buildAreaTransform = this._buildArea.addComponent(UITransform);
-        buildAreaTransform.setContentSize(new Size(720, 900));
-        this._buildArea.setPosition(0, 50, 0);
+        buildAreaTransform.setContentSize(new Size(720, 600));
+        this._buildArea.setPosition(0, 100, 0);
         canvas.addChild(this._buildArea);
         
         // 监听点击
@@ -62,20 +63,21 @@ export class GameController extends Component {
         const menuBg = new Node('MenuBg');
         const menuBgTransform = menuBg.addComponent(UITransform);
         menuBgTransform.setContentSize(new Size(720, 150));
-        menuBg.setPosition(0, -475, 0);
+        menuBg.setPosition(0, -280, 0);
         canvas.addChild(menuBg);
         
         // 3. 创建4个建筑按钮
-        const buttonStartX = -270;
-        const buttonSpacing = 180;
+        const buttonStartX = -240;
+        const buttonSpacing = 160;
         
         for (let i = 0; i < Buildings.length; i++) {
             const building = Buildings[i];
             
             const btnNode = new Node(`Btn_${building.id}`);
             const btnTransform = btnNode.addComponent(UITransform);
-            btnTransform.setContentSize(new Size(160, 120));
-            btnNode.setPosition(buttonStartX + i * buttonSpacing, -475, 0);
+            btnTransform.setContentSize(new Size(140, 100));
+            btnNode.setPosition(buttonStartX + i * buttonSpacing, -280, 0);
+            console.log(`Created button ${building.name} at position`, btnNode.position);
             
             // 按钮文字
             const label = btnNode.addComponent(Label);
@@ -96,7 +98,7 @@ export class GameController extends Component {
         const infoNode = new Node('InfoLabel');
         const infoTransform = infoNode.addComponent(UITransform);
         infoTransform.setContentSize(new Size(600, 50));
-        infoNode.setPosition(0, -350, 0);
+        infoNode.setPosition(0, -180, 0);
         
         this._infoLabel = infoNode.addComponent(Label);
         this._infoLabel.string = '';
