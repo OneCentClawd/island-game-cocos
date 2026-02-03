@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Label, UITransform, Color, Size, EventTouch, Vec3, tween, Sprite, Graphics } from 'cc';
+import { _decorator, Component, Node, Label, UITransform, Color, Size, Vec3, tween, Graphics, Sprite, SpriteFrame, UIOpacity } from 'cc';
 const { ccclass, property } = _decorator;
 
 /**
@@ -13,9 +13,7 @@ const GEMS = [
 ];
 
 const GRID_SIZE = 8;
-const CELL_SIZE = 60;
-const GRID_OFFSET_X = -210;
-const GRID_OFFSET_Y = 100;
+const CELL_SIZE = 70;
 
 interface GemNode {
     node: Node;
@@ -39,98 +37,63 @@ export class Match3Game extends Component {
     // UI引用
     private scoreLabel: Label | null = null;
     private movesLabel: Label | null = null;
-    private infoLabel: Label | null = null;
     private gridContainer: Node | null = null;
-
-    onLoad() {
-        console.log('🧩 消消乐 onLoad');
-        this.createUI();
-        this.initGrid();
-    }
 
     start() {
         console.log('🧩 消消乐 start');
-        this.updateUI();
+        this.createUI();
+        this.initGrid();
     }
 
     /**
      * 创建UI
      */
     createUI() {
-        const canvas = this.node;
+        console.log('创建UI开始');
+        
+        // 分数标签
+        const scoreNode = new Node('ScoreLabel');
+        scoreNode.layer = this.node.layer;
+        const scoreTransform = scoreNode.addComponent(UITransform);
+        scoreTransform.setContentSize(200, 50);
+        this.scoreLabel = scoreNode.addComponent(Label);
+        this.scoreLabel.string = `分数: ${this.score}`;
+        this.scoreLabel.fontSize = 36;
+        this.scoreLabel.color = Color.WHITE;
+        scoreNode.setPosition(-150, 300, 0);
+        this.node.addChild(scoreNode);
+        console.log('分数标签创建完成');
 
-        // 清理旧节点
-        ['ScorePanel', 'GridContainer', 'InfoLabel'].forEach(name => {
-            const old = canvas.getChildByName(name);
-            if (old) old.destroy();
-        });
-
-        // 顶部分数面板
-        const scorePanel = new Node('ScorePanel');
-        scorePanel.addComponent(UITransform).setContentSize(new Size(400, 80));
-        scorePanel.setPosition(0, 350, 0);
-        canvas.addChild(scorePanel);
-
-        // 分数
-        const scoreNode = this.createLabel('分数: 0', -100, 0, 32);
-        this.scoreLabel = scoreNode.getComponent(Label);
-        scorePanel.addChild(scoreNode);
-
-        // 步数
-        const movesNode = this.createLabel('步数: 30', 100, 0, 32);
-        this.movesLabel = movesNode.getComponent(Label);
-        scorePanel.addChild(movesNode);
+        // 步数标签
+        const movesNode = new Node('MovesLabel');
+        movesNode.layer = this.node.layer;
+        const movesTransform = movesNode.addComponent(UITransform);
+        movesTransform.setContentSize(200, 50);
+        this.movesLabel = movesNode.addComponent(Label);
+        this.movesLabel.string = `步数: ${this.moves}`;
+        this.movesLabel.fontSize = 36;
+        this.movesLabel.color = Color.WHITE;
+        movesNode.setPosition(150, 300, 0);
+        this.node.addChild(movesNode);
+        console.log('步数标签创建完成');
 
         // 棋盘容器
         this.gridContainer = new Node('GridContainer');
-        this.gridContainer.addComponent(UITransform).setContentSize(new Size(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE));
-        this.gridContainer.setPosition(GRID_OFFSET_X, GRID_OFFSET_Y, 0);
-        canvas.addChild(this.gridContainer);
-
-        // 绘制棋盘背景
-        this.drawGridBackground();
-
-        // 信息提示
-        const infoNode = this.createLabel('点击宝石交换消除', 0, -280, 24);
-        this.infoLabel = infoNode.getComponent(Label);
-        canvas.addChild(infoNode);
-
-        // 重新开始按钮
-        const restartBtn = this.createButton('🔄 重新开始', 0, -350, () => {
-            this.restartGame();
-        });
-        canvas.addChild(restartBtn);
-    }
-
-    /**
-     * 绘制棋盘背景
-     */
-    drawGridBackground() {
-        if (!this.gridContainer) return;
-
-        const bg = new Node('GridBg');
-        const graphics = bg.addComponent(Graphics);
-        bg.addComponent(UITransform).setContentSize(new Size(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE));
-        
-        for (let row = 0; row < GRID_SIZE; row++) {
-            for (let col = 0; col < GRID_SIZE; col++) {
-                const x = col * CELL_SIZE;
-                const y = (GRID_SIZE - 1 - row) * CELL_SIZE;
-                const isLight = (row + col) % 2 === 0;
-                
-                graphics.fillColor = isLight ? new Color(60, 80, 100, 200) : new Color(40, 60, 80, 200);
-                graphics.roundRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4, 8);
-                graphics.fill();
-            }
-        }
-        
-        this.gridContainer.addChild(bg);
+        this.gridContainer.layer = this.node.layer;
+        const gridTransform = this.gridContainer.addComponent(UITransform);
+        gridTransform.setContentSize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+        gridTransform.setAnchorPoint(0, 0);
+        this.gridContainer.setPosition(-GRID_SIZE * CELL_SIZE / 2, -GRID_SIZE * CELL_SIZE / 2 + 20, 0);
+        this.node.addChild(this.gridContainer);
+        console.log('棋盘容器创建完成');
     }
 
     /**
      * 初始化棋盘
      */
     initGrid() {
+        console.log('初始化棋盘');
+        
         // 初始化二维数组
         this.grid = [];
         for (let row = 0; row < GRID_SIZE; row++) {
@@ -151,6 +114,7 @@ export class Match3Game extends Component {
                 this.createGem(row, col, type);
             }
         }
+        console.log('棋盘初始化完成');
     }
 
     /**
@@ -182,28 +146,29 @@ export class Match3Game extends Component {
     createGem(row: number, col: number, type: number): GemNode {
         const gem = GEMS[type];
         const node = new Node(`Gem_${row}_${col}`);
+        node.layer = this.node.layer;
         
         const transform = node.addComponent(UITransform);
-        transform.setContentSize(new Size(CELL_SIZE - 8, CELL_SIZE - 8));
+        transform.setContentSize(CELL_SIZE - 4, CELL_SIZE - 4);
         
         // 使用 Label 显示 emoji
         const label = node.addComponent(Label);
         label.string = gem.emoji;
-        label.fontSize = 40;
+        label.fontSize = 45;
         label.lineHeight = CELL_SIZE;
         
-        // 位置
+        // 位置（左下角为原点）
         const x = col * CELL_SIZE + CELL_SIZE / 2;
         const y = (GRID_SIZE - 1 - row) * CELL_SIZE + CELL_SIZE / 2;
         node.setPosition(x, y, 0);
-        
-        // 添加点击事件
-        node.on(Node.EventType.TOUCH_END, () => this.onGemClick(gemNode), this);
         
         this.gridContainer?.addChild(node);
         
         const gemNode: GemNode = { node, type, row, col };
         this.grid[row][col] = gemNode;
+        
+        // 添加点击事件
+        node.on(Node.EventType.TOUCH_END, () => this.onGemClick(gemNode), this);
         
         return gemNode;
     }
@@ -213,6 +178,8 @@ export class Match3Game extends Component {
      */
     onGemClick(gem: GemNode) {
         if (this.isProcessing || this.moves <= 0) return;
+
+        console.log(`点击宝石 [${gem.row}, ${gem.col}] 类型:${gem.type}`);
 
         if (!this.selectedGem) {
             // 选中第一个
@@ -280,14 +247,13 @@ export class Match3Game extends Component {
             // 无匹配，换回去
             await this.animateSwap(a, b);
             this.swapGems(a, b);
-            this.showInfo('❌ 无法消除');
         }
 
         this.isProcessing = false;
 
         // 检查游戏结束
         if (this.moves <= 0) {
-            this.showInfo(`🎮 游戏结束！得分: ${this.score}`);
+            console.log(`游戏结束！得分: ${this.score}`);
         }
     }
 
@@ -365,7 +331,6 @@ export class Match3Game extends Component {
             const points = matches.length * 10;
             this.score += points;
             this.updateUI();
-            this.showInfo(`+${points} 分！`);
 
             // 消除动画
             await this.animateRemove(matches);
@@ -475,73 +440,5 @@ export class Match3Game extends Component {
     updateUI() {
         if (this.scoreLabel) this.scoreLabel.string = `分数: ${this.score}`;
         if (this.movesLabel) this.movesLabel.string = `步数: ${this.moves}`;
-    }
-
-    /**
-     * 显示提示
-     */
-    showInfo(text: string) {
-        if (this.infoLabel) this.infoLabel.string = text;
-    }
-
-    /**
-     * 重新开始
-     */
-    restartGame() {
-        this.score = 0;
-        this.moves = 30;
-        this.selectedGem = null;
-        this.isProcessing = false;
-
-        // 清除棋盘
-        for (let row = 0; row < GRID_SIZE; row++) {
-            for (let col = 0; col < GRID_SIZE; col++) {
-                const gem = this.grid[row][col];
-                if (gem) gem.node.destroy();
-            }
-        }
-
-        this.initGrid();
-        this.updateUI();
-        this.showInfo('🧩 新游戏开始！');
-    }
-
-    /**
-     * 创建 Label 节点
-     */
-    createLabel(text: string, x: number, y: number, fontSize: number): Node {
-        const node = new Node('Label');
-        node.addComponent(UITransform);
-        const label = node.addComponent(Label);
-        label.string = text;
-        label.fontSize = fontSize;
-        label.lineHeight = fontSize + 10;
-        label.color = Color.WHITE;
-        node.setPosition(x, y, 0);
-        return node;
-    }
-
-    /**
-     * 创建按钮
-     */
-    createButton(text: string, x: number, y: number, callback: () => void): Node {
-        const node = new Node('Button');
-        const transform = node.addComponent(UITransform);
-        transform.setContentSize(new Size(200, 50));
-        
-        // 背景
-        const graphics = node.addComponent(Graphics);
-        graphics.fillColor = new Color(80, 150, 255, 230);
-        graphics.roundRect(-100, -25, 200, 50, 10);
-        graphics.fill();
-
-        // 文字
-        const labelNode = this.createLabel(text, 0, 0, 24);
-        node.addChild(labelNode);
-
-        node.setPosition(x, y, 0);
-        node.on(Node.EventType.TOUCH_END, callback, this);
-
-        return node;
     }
 }
