@@ -122,11 +122,11 @@ export class MainMenu extends Component {
     drawMenuButtons() {
         // 按钮配置 - 按 weapp 顺序
         const buttons = [
-            { name: '🎮 消消乐', scene: 'LevelSelect' },
-            { name: '🔄 合成模式', scene: 'Merge' },
+            { name: '🎮 消消乐', scene: 'Match3' },
+            { name: '🔄 合成模式', scene: 'MergeGame' },
             { name: '🏝️ 我的小岛', scene: 'Island' },
             { name: '📋 每日任务', scene: 'DailyTask' },
-            { name: '🏆 成就', scene: 'Achievement' },
+            { name: '🏆 成就', scene: 'Achievements' },
             { name: '🛒 商店', scene: 'Shop' },
         ];
         

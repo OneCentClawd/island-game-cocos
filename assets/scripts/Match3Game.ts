@@ -142,27 +142,58 @@ export class Match3Game extends Component {
         this.gameContainer.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         this.node.addChild(this.gameContainer);
 
-        // 背景
+        // 渐变背景（蓝色→紫色）
         const bg = new Node('Background');
         bg.layer = this.node.layer;
         const graphics = bg.addComponent(Graphics);
         bg.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
-        graphics.fillColor = new Color(78, 205, 196);
-        graphics.rect(-this.screenWidth/2, -this.screenHeight/2, this.screenWidth, this.screenHeight);
-        graphics.fill();
+        
+        const segments = 10;
+        const segmentH = this.screenHeight / segments;
+        for (let i = 0; i < segments; i++) {
+            const t = i / segments;
+            const r = Math.round(80 + (130 - 80) * t);
+            const g = Math.round(120 + (100 - 120) * t);
+            const b = Math.round(220 + (180 - 220) * t);
+            graphics.fillColor = new Color(r, g, b);
+            graphics.rect(-this.screenWidth/2, this.screenHeight/2 - (i + 1) * segmentH, this.screenWidth, segmentH);
+            graphics.fill();
+        }
         this.gameContainer.addChild(bg);
 
+        // 返回按钮
+        const backBtn = new Node('BackBtn');
+        backBtn.layer = this.node.layer;
+        backBtn.addComponent(UITransform).setContentSize(80, 40);
+        const backGfx = backBtn.addComponent(Graphics);
+        backGfx.fillColor = new Color(255, 255, 255, 230);
+        backGfx.roundRect(-40, -20, 80, 40, 20);
+        backGfx.fill();
+        const backLabel = this.createLabel('返回', 0, 0, 16);
+        backLabel.getComponent(Label)!.color = new Color(100, 120, 200);
+        backBtn.addChild(backLabel);
+        backBtn.setPosition(-this.screenWidth/2 + 60, this.screenHeight/2 - 80, 0);
+        backBtn.on(Node.EventType.TOUCH_END, () => {
+            director.loadScene('MainMenu');
+        }, this);
+        this.gameContainer.addChild(backBtn);
+
         // 标题
-        const title = this.createLabel('🧩 消消乐', 0, this.screenHeight/2 - 100, 36);
+        const title = this.createLabel('🎮 选择关卡', 0, this.screenHeight/2 - 80, 26);
         this.gameContainer.addChild(title);
+        
+        // 解锁进度
+        const progress = this.createLabel(`已解锁 ${this.unlockedLevel}/20 关`, 0, this.screenHeight/2 - 115, 15);
+        progress.getComponent(Label)!.color = new Color(200, 200, 230);
+        this.gameContainer.addChild(progress);
 
         // 关卡网格
-        const cols = 5;
-        const rows = 4;
-        const btnSize = 65;
-        const spacing = 75;
+        const cols = 4;
+        const rows = 5;
+        const btnSize = 70;
+        const spacing = 90;
         const startX = -(cols - 1) * spacing / 2;
-        const startY = 180;
+        const startY = this.screenHeight/2 - 200;
 
         for (let i = 0; i < 20; i++) {
             const row = Math.floor(i / cols);
@@ -176,46 +207,66 @@ export class Match3Game extends Component {
             const btn = this.createLevelButton(levelNum, x, y, btnSize, unlocked, starCount);
             this.gameContainer.addChild(btn);
         }
-
-        // 返回按钮
-        const backBtn = this.createButton('← 返回', 0, -this.screenHeight/2 + 100, 120, 50, () => {
-            director.loadScene('MainMenu');
-        });
-        this.gameContainer.addChild(backBtn);
     }
 
     createLevelButton(level: number, x: number, y: number, size: number, unlocked: boolean, stars: number): Node {
         const node = new Node(`Level_${level}`);
         node.layer = this.node.layer;
-        node.addComponent(UITransform).setContentSize(size, size);
+        node.addComponent(UITransform).setContentSize(size, size + 20);
 
-        const graphics = node.addComponent(Graphics);
+        // 圆形背景
+        const circle = new Node('Circle');
+        circle.layer = this.node.layer;
+        const graphics = circle.addComponent(Graphics);
+        circle.addComponent(UITransform).setContentSize(size, size);
         
         if (unlocked) {
-            graphics.fillColor = new Color(255, 230, 109);
+            graphics.fillColor = new Color(80, 200, 180);  // 青绿色
         } else {
-            graphics.fillColor = new Color(100, 100, 100);
+            graphics.fillColor = new Color(100, 110, 120);  // 灰色
         }
-        graphics.roundRect(-size/2, -size/2, size, size, 12);
+        graphics.circle(0, 0, size / 2);
         graphics.fill();
+        node.addChild(circle);
 
-        // 关卡数字
-        const label = this.createLabel(unlocked ? level.toString() : '🔒', 0, 5, 22);
-        label.getComponent(Label)!.color = unlocked ? new Color(44, 62, 80) : new Color(150, 150, 150);
-        node.addChild(label);
+        if (unlocked) {
+            // 关卡数字
+            const label = this.createLabel(level.toString(), 0, 5, 26);
+            label.getComponent(Label)!.color = Color.WHITE;
+            node.addChild(label);
 
-        // 星星
-        if (unlocked && stars > 0) {
-            const starsText = '⭐'.repeat(stars);
-            const starsLabel = this.createLabel(starsText, 0, -20, 10);
-            node.addChild(starsLabel);
+            // 星星
+            if (stars > 0) {
+                let starsText = '';
+                for (let i = 0; i < 3; i++) {
+                    starsText += i < stars ? '⭐' : '☆';
+                }
+                const starsLabel = this.createLabel(starsText, 0, -28, 12);
+                node.addChild(starsLabel);
+            } else {
+                const starsLabel = this.createLabel('☆☆☆', 0, -28, 12);
+                starsLabel.getComponent(Label)!.color = new Color(200, 200, 200);
+                node.addChild(starsLabel);
+            }
+        } else {
+            // 锁图标
+            const lockLabel = this.createLabel('🔒', 0, 0, 26);
+            node.addChild(lockLabel);
         }
 
         node.setPosition(x, y, 0);
 
         if (unlocked) {
+            node.on(Node.EventType.TOUCH_START, () => {
+                tween(node).to(0.05, { scale: new Vec3(0.9, 0.9, 1) }).start();
+            }, this);
             node.on(Node.EventType.TOUCH_END, () => {
-                this.startLevel(level);
+                tween(node).to(0.1, { scale: new Vec3(1, 1, 1) }).call(() => {
+                    this.startLevel(level);
+                }).start();
+            }, this);
+            node.on(Node.EventType.TOUCH_CANCEL, () => {
+                tween(node).to(0.1, { scale: new Vec3(1, 1, 1) }).start();
             }, this);
         }
 

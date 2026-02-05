@@ -231,8 +231,8 @@ export class LevelSelectScene extends Component {
             console.error('保存关卡失败:', e);
         }
         
-        // 跳转到消消乐游戏
-        director.loadScene('Match3Game');
+        // 跳转到消消乐游戏（消消乐内置关卡选择，直接进入游戏场景）
+        director.loadScene('Match3');
     }
 
     // =================== 存档 ===================
