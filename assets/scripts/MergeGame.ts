@@ -142,6 +142,9 @@ interface Shopper {
     timeLeft: number;
 }
 
+// 获取屏幕尺寸（用于自适应布局）
+import { view } from 'cc';
+
 /**
  * 合成游戏 - 完整版
  */
@@ -167,8 +170,18 @@ export class MergeGame extends Component {
     private infoLabel: Label | null = null;
     private gameContainer: Node | null = null;
 
+    // 屏幕尺寸
+    private screenWidth: number = 750;
+    private screenHeight: number = 1334;
+
     start() {
         console.log('🔮 合成游戏 - 完整版');
+        
+        // 获取设计分辨率
+        const designSize = view.getDesignResolutionSize();
+        this.screenWidth = designSize.width;
+        this.screenHeight = designSize.height;
+        
         this.loadGame();
         this.initGame();
     }
@@ -176,7 +189,7 @@ export class MergeGame extends Component {
     initGame() {
         this.gameContainer = new Node('GameContainer');
         this.gameContainer.layer = this.node.layer;
-        this.gameContainer.addComponent(UITransform).setContentSize(800, 800);
+        this.gameContainer.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         this.node.addChild(this.gameContainer);
 
         // 背景
@@ -219,22 +232,25 @@ export class MergeGame extends Component {
         const bg = new Node('Background');
         bg.layer = this.node.layer;
         const graphics = bg.addComponent(Graphics);
-        bg.addComponent(UITransform).setContentSize(800, 800);
+        bg.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         
         // 渐变背景
         graphics.fillColor = new Color(78, 205, 196);
-        graphics.rect(-400, -400, 800, 800);
+        graphics.rect(-this.screenWidth/2, -this.screenHeight/2, this.screenWidth, this.screenHeight);
         graphics.fill();
         
         this.gameContainer?.addChild(bg);
     }
 
     drawResourceBar() {
+        // 顶部资源栏 - 放在屏幕顶部
+        const topY = this.screenHeight / 2 - 60;
+        
         const bar = new Node('ResourceBar');
         bar.layer = this.node.layer;
         const graphics = bar.addComponent(Graphics);
         bar.addComponent(UITransform).setContentSize(380, 50);
-        bar.setPosition(0, 350, 0);
+        bar.setPosition(0, topY, 0);
         
         graphics.fillColor = new Color(0, 0, 0, 150);
         graphics.roundRect(-190, -25, 380, 50, 12);
@@ -253,7 +269,7 @@ export class MergeGame extends Component {
         bar.addChild(diamondsNode);
 
         // 返回按钮
-        const backBtn = this.createButton('←', -350, 350, 50, 40, () => {
+        const backBtn = this.createButton('←', -this.screenWidth/2 + 50, topY, 50, 40, () => {
             this.saveGame();
             director.loadScene('MainMenu');
         });
@@ -261,26 +277,32 @@ export class MergeGame extends Component {
     }
 
     drawShopperArea() {
+        // 购物者区域 - 在资源栏下方
+        const topY = this.screenHeight / 2 - 150;
+        
         this.shopperContainer = new Node('ShopperArea');
         this.shopperContainer.layer = this.node.layer;
         this.shopperContainer.addComponent(UITransform).setContentSize(380, 100);
-        this.shopperContainer.setPosition(0, 270, 0);
+        this.shopperContainer.setPosition(0, topY, 0);
         this.gameContainer?.addChild(this.shopperContainer);
 
         // 标题
-        const title = this.createLabel('📋 📋', 0, 40, 18);
+        const title = this.createLabel('📋 订单', 0, 40, 18);
         this.shopperContainer.addChild(title);
     }
 
     drawGrid() {
-        this.gridContainer = new Node('GridContainer');
-        this.gridContainer.layer = this.node.layer;
+        // 棋盘 - 居中偏上
         const gridW = GRID_COLS * CELL_SIZE;
         const gridH = GRID_ROWS * CELL_SIZE;
+        const gridY = 50;  // 稍微偏上一点
+        
+        this.gridContainer = new Node('GridContainer');
+        this.gridContainer.layer = this.node.layer;
         const transform = this.gridContainer.addComponent(UITransform);
         transform.setContentSize(gridW, gridH);
         transform.setAnchorPoint(0, 0);
-        this.gridContainer.setPosition(-gridW / 2, -gridH / 2 - 30, 0);
+        this.gridContainer.setPosition(-gridW / 2, gridY - gridH / 2, 0);
         this.gameContainer?.addChild(this.gridContainer);
 
         // 绘制格子背景
@@ -304,7 +326,8 @@ export class MergeGame extends Component {
     }
 
     drawBottomButtons() {
-        const btnY = -340;
+        // 底部按钮 - 放在屏幕底部
+        const btnY = -this.screenHeight / 2 + 80;
 
         // 收集💰币按钮
         const collectBtn = this.createButton('💰 收集', -100, btnY, 120, 50, () => {
@@ -313,14 +336,16 @@ export class MergeGame extends Component {
         this.gameContainer?.addChild(collectBtn);
 
         // 刷新购物者按钮
-        const refreshBtn = this.createButton('🔄 刷新📋', 100, btnY, 140, 50, () => {
+        const refreshBtn = this.createButton('🔄 刷新订单', 100, btnY, 140, 50, () => {
             this.refreshShoppers();
         });
         this.gameContainer?.addChild(refreshBtn);
     }
 
     drawInfoBar() {
-        const infoNode = this.createLabel('', 0, 190, 16);
+        // 信息栏 - 在棋盘上方
+        const infoY = this.screenHeight / 2 - 230;
+        const infoNode = this.createLabel('', 0, infoY, 16);
         this.infoLabel = infoNode.getComponent(Label);
         this.gameContainer?.addChild(infoNode);
     }
