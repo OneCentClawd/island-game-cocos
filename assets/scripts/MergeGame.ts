@@ -503,10 +503,99 @@ export class MergeGame extends Component {
 
         // 随机掉落
         const drop = this.randomDrop();
-        this.spawnItem(drop, empty.x, empty.y);
+        
+        // 创建物品（先在仓库位置）
+        const item = this.spawnItemAtPosition(drop, empty.x, empty.y, warehouse.gridX, warehouse.gridY);
+        if (item) {
+            // 从仓库弹出动画
+            const warehouseX = warehouse.gridX * CELL_SIZE + CELL_SIZE / 2;
+            const warehouseY = warehouse.gridY * CELL_SIZE + CELL_SIZE / 2;
+            const targetX = empty.x * CELL_SIZE + CELL_SIZE / 2;
+            const targetY = empty.y * CELL_SIZE + CELL_SIZE / 2;
+            
+            // 先放在仓库位置，缩小状态
+            item.node.setPosition(warehouseX, warehouseY, 0);
+            item.node.setScale(new Vec3(0.3, 0.3, 1));
+            
+            // 弹出动画：先往上跳，再落到目标位置
+            const jumpHeight = 80;
+            const midX = (warehouseX + targetX) / 2;
+            const midY = Math.max(warehouseY, targetY) + jumpHeight;
+            
+            tween(item.node)
+                .to(0.15, { 
+                    position: new Vec3(midX, midY, 0),
+                    scale: new Vec3(1.2, 1.2, 1)
+                }, { easing: 'quadOut' })
+                .to(0.2, { 
+                    position: new Vec3(targetX, targetY, 0),
+                    scale: new Vec3(1, 1, 1)
+                }, { easing: 'bounceOut' })
+                .start();
+        }
         
         this.showInfo(`获得了 ${ITEMS[drop].emoji} ${ITEMS[drop].name}！`);
         this.saveGame();
+    }
+
+    // 在指定位置生成物品（用于动画，初始位置可不同）
+    spawnItemAtPosition(key: string, gridX: number, gridY: number, startGridX: number, startGridY: number): MergeItem | null {
+        const config = ITEMS[key];
+        if (!config) return null;
+        if (this.grid[gridY]?.[gridX]) return null;
+
+        const node = new Node(`Item_${this.nextItemId}`);
+        node.layer = this.node.layer;
+        
+        const transform = node.addComponent(UITransform);
+        transform.setContentSize(CELL_SIZE - 6, CELL_SIZE - 6);
+        
+        // 背景节点
+        const bgNode = new Node('Background');
+        bgNode.layer = this.node.layer;
+        bgNode.addComponent(UITransform).setContentSize(CELL_SIZE - 6, CELL_SIZE - 6);
+        const graphics = bgNode.addComponent(Graphics);
+        const tierColor = TIER_COLORS[config.tier] || TIER_COLORS[0];
+        graphics.fillColor = tierColor;
+        graphics.roundRect(-(CELL_SIZE-6)/2, -(CELL_SIZE-6)/2, CELL_SIZE - 6, CELL_SIZE - 6, 10);
+        graphics.fill();
+        node.addChild(bgNode);
+        
+        // emoji 节点
+        const labelNode = new Node('Label');
+        labelNode.layer = this.node.layer;
+        labelNode.addComponent(UITransform).setContentSize(CELL_SIZE - 6, CELL_SIZE - 6);
+        const label = labelNode.addComponent(Label);
+        label.string = config.emoji;
+        label.fontSize = 28;
+        label.lineHeight = CELL_SIZE;
+        label.color = Color.WHITE;
+        node.addChild(labelNode);
+        
+        // 初始位置（仓库位置）
+        const x = startGridX * CELL_SIZE + CELL_SIZE / 2;
+        const y = startGridY * CELL_SIZE + CELL_SIZE / 2;
+        node.setPosition(x, y, 0);
+        
+        this.gridContainer?.addChild(node);
+        
+        const item: MergeItem = { 
+            id: this.nextItemId++,
+            node, 
+            config,
+            gridX, 
+            gridY 
+        };
+        this.grid[gridY][gridX] = item;
+        this.items.push(item);
+        
+        // 添加交互
+        node.on(Node.EventType.TOUCH_START, (e: any) => this.onItemTouchStart(item, e), this);
+        node.on(Node.EventType.TOUCH_MOVE, (e: any) => this.onItemTouchMove(item, e), this);
+        node.on(Node.EventType.TOUCH_END, (e: any) => this.onItemTouchEnd(item, e), this);
+        node.on(Node.EventType.TOUCH_CANCEL, (e: any) => this.onItemTouchEnd(item, e), this);
+        
+        return item;
     }
 
     randomDrop(): string {
