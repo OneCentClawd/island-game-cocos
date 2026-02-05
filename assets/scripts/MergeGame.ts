@@ -158,11 +158,16 @@ export class MergeGame extends Component {
     private nextShopperId: number = 1;
     
     // 资源
-    private energy: number = 9995;
+    private energy: number = 100;
+    private maxEnergy: number = 100;
     private coins: number = 515;
     private diamonds: number = 10;
     private wood: number = 100;
     private stone: number = 50;
+    
+    // 体力恢复
+    private lastEnergyTime: number = 0;
+    private energyRecoverInterval: number = 180;  // 每3分钟恢复1点体力
 
     // UI引用
     private gameContainer: Node | null = null;
@@ -186,8 +191,55 @@ export class MergeGame extends Component {
         this.screenWidth = size.width;
         this.screenHeight = size.height;
         
+        // 加载数据
         this.loadGame();
+        
+        // 计算离线期间恢复的体力
+        this.recoverOfflineEnergy();
+        
         this.initGame();
+        
+        // 启动体力恢复定时器
+        this.schedule(this.recoverEnergy.bind(this), 1);  // 每秒检查一次
+    }
+
+    // =================== 体力恢复系统 ===================
+    recoverOfflineEnergy() {
+        if (this.lastEnergyTime === 0) {
+            this.lastEnergyTime = Date.now();
+            return;
+        }
+        
+        const now = Date.now();
+        const elapsed = (now - this.lastEnergyTime) / 1000;  // 秒
+        const recovered = Math.floor(elapsed / this.energyRecoverInterval);
+        
+        if (recovered > 0 && this.energy < this.maxEnergy) {
+            const oldEnergy = this.energy;
+            this.energy = Math.min(this.maxEnergy, this.energy + recovered);
+            const actualRecovered = this.energy - oldEnergy;
+            if (actualRecovered > 0) {
+                this.showInfo(`💤 离线恢复了 ${actualRecovered}⚡ 体力！`);
+            }
+            this.lastEnergyTime = now - (elapsed % this.energyRecoverInterval) * 1000;
+        }
+    }
+    
+    recoverEnergy() {
+        if (this.energy >= this.maxEnergy) {
+            this.lastEnergyTime = Date.now();
+            return;
+        }
+        
+        const now = Date.now();
+        const elapsed = (now - this.lastEnergyTime) / 1000;
+        
+        if (elapsed >= this.energyRecoverInterval) {
+            this.energy = Math.min(this.maxEnergy, this.energy + 1);
+            this.lastEnergyTime = now;
+            this.updateResourceUI();
+            this.saveGame();
+        }
     }
 
     initGame() {
@@ -392,15 +444,21 @@ export class MergeGame extends Component {
         });
         this.gameContainer?.addChild(backBtn);
         
+        // 💎购买体力按钮
+        const buyEnergyBtn = this.createButton('💎+10⚡', this.screenWidth/2 - 70, bottomY, 90, 40, () => {
+            this.buyEnergy();
+        });
+        this.gameContainer?.addChild(buyEnergyBtn);
+        
         // 信息栏
         const infoBar = new Node('InfoBar');
         infoBar.layer = this.node.layer;
         const graphics = infoBar.addComponent(Graphics);
-        infoBar.addComponent(UITransform).setContentSize(this.screenWidth - 180, 40);
-        infoBar.setPosition(40, bottomY, 0);
+        infoBar.addComponent(UITransform).setContentSize(this.screenWidth - 280, 40);
+        infoBar.setPosition(0, bottomY, 0);
         
         graphics.fillColor = new Color(0, 60, 40, 200);
-        graphics.roundRect(-(this.screenWidth-180)/2, -20, this.screenWidth - 180, 40, 8);
+        graphics.roundRect(-(this.screenWidth-280)/2, -20, this.screenWidth - 280, 40, 8);
         graphics.fill();
         
         this.gameContainer?.addChild(infoBar);
@@ -409,6 +467,23 @@ export class MergeGame extends Component {
         const infoNode = this.createLabel('', 0, 0, 16);
         this.infoLabel = infoNode.getComponent(Label);
         infoBar.addChild(infoNode);
+    }
+    
+    // 💎购买体力
+    buyEnergy() {
+        const cost = 1;  // 1💎 = 10⚡
+        const energyGain = 10;
+        
+        if (this.diamonds < cost) {
+            this.showInfo(`💎 钻石不足！需要 ${cost}💎`);
+            return;
+        }
+        
+        this.diamonds -= cost;
+        this.energy = Math.min(this.maxEnergy + energyGain, this.energy + energyGain);  // 可以超过上限
+        this.updateResourceUI();
+        this.saveGame();
+        this.showInfo(`-${cost}💎 获得 ${energyGain}⚡ 体力！`);
     }
 
     // =================== 购物者系统 ===================
@@ -954,6 +1029,8 @@ export class MergeGame extends Component {
                 coins: this.coins,
                 diamonds: this.diamonds,
                 energy: this.energy,
+                maxEnergy: this.maxEnergy,
+                lastEnergyTime: this.lastEnergyTime,
                 wood: this.wood,
                 stone: this.stone,
                 nextItemId: this.nextItemId,
@@ -972,7 +1049,9 @@ export class MergeGame extends Component {
                 const data = JSON.parse(saved);
                 this.coins = data.coins || 515;
                 this.diamonds = data.diamonds || 10;
-                this.energy = data.energy || 9995;
+                this.energy = data.energy ?? 100;
+                this.maxEnergy = data.maxEnergy ?? 100;
+                this.lastEnergyTime = data.lastEnergyTime ?? Date.now();
                 this.wood = data.wood || 100;
                 this.stone = data.stone || 50;
                 this.shoppers = data.shoppers || [];
