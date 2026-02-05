@@ -4,282 +4,413 @@ const { ccclass, property } = _decorator;
 /**
  * 排行榜类型
  */
-const LEADERBOARD_TYPES = [
-    { key: 'match3_score', name: '消消乐', icon: '🧩' },
-    { key: 'merge_level', name: '合成', icon: '🔮' },
-    { key: 'puppy_love', name: '好感度', icon: '❤️' },
-];
+type LeaderboardType = 'level' | 'score' | 'coin';
 
 /**
- * 排行榜系统
+ * 玩家数据
+ */
+interface PlayerData {
+    name: string;
+    score: number;
+}
+
+/**
+ * 模拟排行榜数据
+ */
+const MOCK_DATA: { [key: string]: PlayerData[] } = {
+    level: [
+        { name: 'Jack', score: 5 },
+        { name: '鱼酷', score: 5 },
+        { name: '鱼 🐟', score: 5 },
+        { name: '小明', score: 3 },
+        { name: '玩家A', score: 2 },
+    ],
+    score: [
+        { name: '鱼酷', score: 12580 },
+        { name: 'Jack', score: 9800 },
+        { name: '小明', score: 7650 },
+        { name: '鱼 🐟', score: 5200 },
+    ],
+    coin: [
+        { name: 'Jack', score: 2500 },
+        { name: '小明', score: 1800 },
+        { name: '鱼酷', score: 1200 },
+    ],
+};
+
+/**
+ * 排行榜系统 - 复刻 weapp 版
  */
 @ccclass('LeaderboardSystem')
 export class LeaderboardSystem extends Component {
     private container: Node | null = null;
-    private currentType: string = 'match3_score';
-    private rankings: {name: string, score: number}[] = [];
+    private listContainer: Node | null = null;
+    private tabButtons: Node[] = [];
+    private myRankLabel: Label | null = null;
+    
+    // 当前选中的排行榜类型
+    private currentType: LeaderboardType = 'level';
+    
+    // 玩家名称
+    private playerName: string = 'Jack';
     
     // 屏幕尺寸
     private screenWidth: number = 750;
     private screenHeight: number = 1334;
 
     start() {
-        console.log('🏆 排行榜系统');
+        console.log('🏆 排行榜');
         
         const size = view.getDesignResolutionSize();
         this.screenWidth = size.width;
         this.screenHeight = size.height;
         
-        this.loadData();
-        this.showLeaderboard();
+        this.initUI();
     }
 
-    showLeaderboard() {
-        this.clearAll();
-
+    initUI() {
         this.container = new Node('Container');
         this.container.layer = this.node.layer;
         this.container.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         this.node.addChild(this.container);
 
-        // 背景
-        const bg = new Node('Bg');
+        this.drawBackground();
+        this.drawTopBar();
+        this.drawTabs();
+        this.drawListPanel();
+        this.drawBottomBar();
+        
+        // 默认显示关卡进度排行榜
+        this.showLeaderboard('level');
+    }
+
+    // =================== 背景 ===================
+    drawBackground() {
+        const bg = new Node('Background');
         bg.layer = this.node.layer;
         const graphics = bg.addComponent(Graphics);
         bg.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
-        graphics.fillColor = new Color(103, 58, 183);
-        graphics.rect(-this.screenWidth/2, -this.screenHeight/2, this.screenWidth, this.screenHeight);
-        graphics.fill();
-        this.container.addChild(bg);
+        
+        // 渐变：蓝色 → 紫色
+        const segments = 10;
+        const segmentH = this.screenHeight / segments;
+        
+        for (let i = 0; i < segments; i++) {
+            const t = i / segments;
+            const r = Math.round(80 + (140 - 80) * t);
+            const g = Math.round(120 + (100 - 120) * t);
+            const b = Math.round(200 + (180 - 200) * t);
+            
+            graphics.fillColor = new Color(r, g, b);
+            graphics.rect(
+                -this.screenWidth/2, 
+                this.screenHeight/2 - (i + 1) * segmentH, 
+                this.screenWidth, 
+                segmentH
+            );
+            graphics.fill();
+        }
+        
+        this.container?.addChild(bg);
+    }
 
-        // 标题
-        const title = this.createLabel('🏆 排行榜', 0, this.screenHeight/2 - 70, 36);
-        this.container.addChild(title);
-
-        // Tab 栏
-        this.createTabs();
-
-        // 排行列表
-        this.createRankingList();
-
-        // 我的排名
-        this.showMyRank();
-
+    // =================== 顶部栏 ===================
+    drawTopBar() {
+        const topY = this.screenHeight/2 - 80;
+        
         // 返回按钮
-        const backBtn = this.createButton('返回', 0, -this.screenHeight/2 + 80, 120, 50, () => {
+        const backBtn = new Node('BackBtn');
+        backBtn.layer = this.node.layer;
+        backBtn.addComponent(UITransform).setContentSize(80, 40);
+        
+        const backGfx = backBtn.addComponent(Graphics);
+        backGfx.fillColor = new Color(255, 255, 255, 230);
+        backGfx.roundRect(-40, -20, 80, 40, 20);
+        backGfx.fill();
+        
+        const backLabel = this.createLabel('返回', 0, 0, 16);
+        backLabel.getComponent(Label)!.color = new Color(80, 120, 200);
+        backBtn.addChild(backLabel);
+        
+        backBtn.setPosition(-this.screenWidth/2 + 60, topY, 0);
+        backBtn.on(Node.EventType.TOUCH_END, () => {
             director.loadScene('MainMenu');
-        });
-        this.container.addChild(backBtn);
-    }
-
-    createTabs() {
-        const tabWidth = 100;
-        const startX = -(LEADERBOARD_TYPES.length - 1) * tabWidth / 2;
-
-        LEADERBOARD_TYPES.forEach((type, i) => {
-            const x = startX + i * tabWidth;
-            const isActive = type.key === this.currentType;
-            
-            const tab = this.createTab(type.icon + ' ' + type.name, x, this.screenHeight/2 - 130, isActive, () => {
-                this.currentType = type.key;
-                this.loadData();
-                this.showLeaderboard();
-            });
-            this.container?.addChild(tab);
-        });
-    }
-
-    createTab(text: string, x: number, y: number, isActive: boolean, callback: () => void): Node {
-        const node = new Node('Tab');
-        node.layer = this.node.layer;
-        node.addComponent(UITransform).setContentSize(95, 35);
+        }, this);
+        this.container?.addChild(backBtn);
         
-        const graphics = node.addComponent(Graphics);
-        graphics.fillColor = isActive ? new Color(255, 255, 255, 80) : new Color(0, 0, 0, 50);
-        graphics.roundRect(-47, -17, 95, 35, 8);
-        graphics.fill();
-
-        const label = this.createLabel(text, 0, 0, 14);
-        node.addChild(label);
-
-        node.setPosition(x, y, 0);
-        node.on(Node.EventType.TOUCH_END, callback, this);
-
-        return node;
+        // 标题
+        const title = this.createLabel('🏆 排行榜', 0, topY, 26);
+        this.container?.addChild(title);
+        
+        // 用户名
+        const userName = this.createLabel(this.playerName, this.screenWidth/2 - 60, topY, 14);
+        userName.getComponent(Label)!.color = new Color(200, 200, 255);
+        this.container?.addChild(userName);
     }
 
-    createRankingList() {
-        const listBg = new Node('ListBg');
-        listBg.layer = this.node.layer;
-        const graphics = listBg.addComponent(Graphics);
-        listBg.addComponent(UITransform).setContentSize(360, 400);
-        graphics.fillColor = new Color(0, 0, 0, 100);
-        graphics.roundRect(-180, -200, 360, 400, 12);
-        graphics.fill();
-        listBg.setPosition(0, 20, 0);
-        this.container?.addChild(listBg);
-
-        // 排名项
-        const startY = 160;
-        const itemHeight = 45;
-        const maxShow = 8;
-
-        const displayRankings = this.rankings.slice(0, maxShow);
+    // =================== Tab切换 ===================
+    drawTabs() {
+        const tabY = this.screenHeight/2 - 150;
+        const tabs = [
+            { type: 'level' as LeaderboardType, icon: '🎮', name: '关卡进度' },
+            { type: 'score' as LeaderboardType, icon: '💎', name: '消消乐分数' },
+            { type: 'coin' as LeaderboardType, icon: '💰', name: '合成金币' },
+        ];
         
-        if (displayRankings.length === 0) {
-            const emptyLabel = this.createLabel('暂无数据', 0, 0, 18);
-            emptyLabel.getComponent(Label)!.color = new Color(200, 200, 200);
-            listBg.addChild(emptyLabel);
+        const tabW = (this.screenWidth - 60) / 3;
+        const tabH = 40;
+        const startX = -(this.screenWidth - 60) / 2 + tabW / 2 + 10;
+        
+        tabs.forEach((tab, i) => {
+            const x = startX + i * (tabW + 5);
+            const btn = this.createTabButton(tab, x, tabY, tabW, tabH);
+            this.tabButtons.push(btn);
+            this.container?.addChild(btn);
+        });
+    }
+
+    createTabButton(tab: { type: LeaderboardType, icon: string, name: string }, x: number, y: number, w: number, h: number): Node {
+        const btn = new Node(`Tab_${tab.type}`);
+        btn.layer = this.node.layer;
+        btn.addComponent(UITransform).setContentSize(w, h);
+        
+        const gfx = btn.addComponent(Graphics);
+        const isSelected = tab.type === this.currentType;
+        
+        if (isSelected) {
+            gfx.fillColor = new Color(255, 255, 255, 230);
         } else {
-            displayRankings.forEach((item, i) => {
-                const y = startY - i * itemHeight;
-                const rankItem = this.createRankItem(i + 1, item.name, item.score, y);
-                listBg.addChild(rankItem);
-            });
+            gfx.fillColor = new Color(100, 120, 180, 200);
         }
-    }
-
-    createRankItem(rank: number, name: string, score: number, y: number): Node {
-        const node = new Node('RankItem');
-        node.layer = this.node.layer;
-        node.addComponent(UITransform).setContentSize(320, 40);
-
-        // 排名
-        let rankText: string;
-        if (rank === 1) rankText = '🥇';
-        else if (rank === 2) rankText = '🥈';
-        else if (rank === 3) rankText = '🥉';
-        else rankText = `${rank}`;
+        gfx.roundRect(-w/2, -h/2, w, h, 8);
+        gfx.fill();
         
-        const rankLabel = this.createLabel(rankText, -130, 0, 20);
-        node.addChild(rankLabel);
-
-        // 名字
-        const nameLabel = this.createLabel(name, -30, 0, 16);
-        node.addChild(nameLabel);
-
-        // 分数
-        const scoreLabel = this.createLabel(`${score}`, 120, 0, 16);
-        scoreLabel.getComponent(Label)!.color = new Color(255, 215, 0);
-        node.addChild(scoreLabel);
-
-        node.setPosition(0, y, 0);
-        return node;
-    }
-
-    showMyRank() {
-        const myRank = this.getMyRank();
-        const myScore = this.getMyScore();
-
-        const myRankBg = new Node('MyRankBg');
-        myRankBg.layer = this.node.layer;
-        const graphics = myRankBg.addComponent(Graphics);
-        myRankBg.addComponent(UITransform).setContentSize(360, 50);
-        graphics.fillColor = new Color(255, 255, 255, 30);
-        graphics.roundRect(-180, -25, 360, 50, 10);
-        graphics.fill();
-        myRankBg.setPosition(0, -250, 0);
-        this.container?.addChild(myRankBg);
-
-        const myText = myRank > 0 
-            ? `我的排名: 第${myRank}名 (${myScore}分)`
-            : '我的排名: 暂未上榜';
-        const myLabel = this.createLabel(myText, 0, 0, 16);
-        myRankBg.addChild(myLabel);
-    }
-
-    getMyRank(): number {
-        const myScore = this.getMyScore();
-        if (myScore === 0) return 0;
+        const label = this.createLabel(`${tab.icon} ${tab.name}`, 0, 0, 13);
+        label.getComponent(Label)!.color = isSelected ? new Color(100, 120, 200) : Color.WHITE;
+        btn.addChild(label);
         
-        const rank = this.rankings.findIndex(r => r.score <= myScore);
-        return rank === -1 ? this.rankings.length + 1 : rank + 1;
+        btn.setPosition(x, y, 0);
+        
+        // 点击切换
+        btn.on(Node.EventType.TOUCH_END, () => {
+            this.showLeaderboard(tab.type);
+        }, this);
+        
+        return btn;
     }
 
-    getMyScore(): number {
-        try {
-            if (typeof localStorage === 'undefined') return 0;
+    // =================== 列表面板 ===================
+    drawListPanel() {
+        const panelY = -20;
+        const panelW = this.screenWidth - 40;
+        const panelH = this.screenHeight - 400;
+        
+        const panel = new Node('ListPanel');
+        panel.layer = this.node.layer;
+        panel.addComponent(UITransform).setContentSize(panelW, panelH);
+        
+        const gfx = panel.addComponent(Graphics);
+        gfx.fillColor = new Color(160, 140, 200, 80);
+        gfx.roundRect(-panelW/2, -panelH/2, panelW, panelH, 15);
+        gfx.fill();
+        
+        panel.setPosition(0, panelY, 0);
+        this.container?.addChild(panel);
+        
+        // 表头
+        const headerY = panelH/2 - 30;
+        const rankHeader = this.createLabel('排名', -panelW/2 + 50, headerY, 14);
+        rankHeader.getComponent(Label)!.color = new Color(200, 200, 220);
+        panel.addChild(rankHeader);
+        
+        const nameHeader = this.createLabel('玩家', -panelW/2 + 150, headerY, 14);
+        nameHeader.getComponent(Label)!.color = new Color(200, 200, 220);
+        panel.addChild(nameHeader);
+        
+        const scoreHeader = this.createLabel('分数', panelW/2 - 50, headerY, 14);
+        scoreHeader.getComponent(Label)!.color = new Color(200, 200, 220);
+        panel.addChild(scoreHeader);
+        
+        // 列表容器
+        this.listContainer = new Node('ListContent');
+        this.listContainer.layer = this.node.layer;
+        this.listContainer.addComponent(UITransform).setContentSize(panelW, panelH - 60);
+        this.listContainer.setPosition(0, -20, 0);
+        panel.addChild(this.listContainer);
+    }
+
+    // =================== 底部栏 ===================
+    drawBottomBar() {
+        const bottomY = -this.screenHeight/2 + 80;
+        const barW = this.screenWidth - 40;
+        const barH = 50;
+        
+        const bar = new Node('BottomBar');
+        bar.layer = this.node.layer;
+        bar.addComponent(UITransform).setContentSize(barW, barH);
+        
+        const gfx = bar.addComponent(Graphics);
+        gfx.fillColor = new Color(180, 140, 100, 200);
+        gfx.roundRect(-barW/2, -barH/2, barW, barH, 10);
+        gfx.fill();
+        
+        bar.setPosition(0, bottomY, 0);
+        this.container?.addChild(bar);
+        
+        // 我的排名
+        const myRank = this.createLabel('我的排名: 第1名 (5分)', -barW/2 + 150, 0, 16);
+        myRank.getComponent(Label)!.color = new Color(255, 230, 150);
+        this.myRankLabel = myRank.getComponent(Label);
+        bar.addChild(myRank);
+        
+        // 刷新按钮
+        const refreshBtn = new Node('RefreshBtn');
+        refreshBtn.layer = this.node.layer;
+        refreshBtn.addComponent(UITransform).setContentSize(90, 35);
+        
+        const refreshGfx = refreshBtn.addComponent(Graphics);
+        refreshGfx.fillColor = new Color(50, 180, 200);
+        refreshGfx.roundRect(-45, -17, 90, 35, 8);
+        refreshGfx.fill();
+        
+        const refreshLabel = this.createLabel('🔄 刷新', 0, 0, 14);
+        refreshBtn.addChild(refreshLabel);
+        
+        refreshBtn.setPosition(barW/2 - 65, 0, 0);
+        refreshBtn.on(Node.EventType.TOUCH_END, () => {
+            this.showLeaderboard(this.currentType);
+            this.showToast('已刷新');
+        }, this);
+        bar.addChild(refreshBtn);
+    }
+
+    // =================== 显示排行榜 ===================
+    showLeaderboard(type: LeaderboardType) {
+        this.currentType = type;
+        
+        // 更新 Tab 样式
+        this.updateTabs();
+        
+        // 清空列表
+        this.listContainer?.removeAllChildren();
+        
+        // 获取数据
+        const data = MOCK_DATA[type] || [];
+        
+        // 渲染列表
+        const rowH = 50;
+        const startY = (this.listContainer?.getComponent(UITransform)?.height || 0) / 2 - 30;
+        
+        data.forEach((player, i) => {
+            const y = startY - i * rowH;
+            const row = this.createPlayerRow(i + 1, player, y);
+            this.listContainer?.addChild(row);
+        });
+        
+        // 更新我的排名
+        this.updateMyRank(type, data);
+    }
+
+    updateTabs() {
+        const types: LeaderboardType[] = ['level', 'score', 'coin'];
+        
+        this.tabButtons.forEach((btn, i) => {
+            const gfx = btn.getComponent(Graphics);
+            const label = btn.children[0]?.getComponent(Label);
+            const isSelected = types[i] === this.currentType;
             
-            switch (this.currentType) {
-                case 'match3_score':
-                    return parseInt(localStorage.getItem('match3_high_score') || '0');
-                case 'merge_level':
-                    return parseInt(localStorage.getItem('merge_max_level') || '0');
-                case 'puppy_love':
-                    const puppy = JSON.parse(localStorage.getItem('island_puppy') || '{}');
-                    return Math.floor(puppy.love || 0);
-                default:
-                    return 0;
+            if (gfx && label) {
+                gfx.clear();
+                const w = btn.getComponent(UITransform)?.width || 100;
+                const h = btn.getComponent(UITransform)?.height || 40;
+                
+                if (isSelected) {
+                    gfx.fillColor = new Color(255, 255, 255, 230);
+                    label.color = new Color(100, 120, 200);
+                } else {
+                    gfx.fillColor = new Color(100, 120, 180, 200);
+                    label.color = Color.WHITE;
+                }
+                gfx.roundRect(-w/2, -h/2, w, h, 8);
+                gfx.fill();
             }
-        } catch (e) {
-            return 0;
+        });
+    }
+
+    createPlayerRow(rank: number, player: PlayerData, y: number): Node {
+        const row = new Node('PlayerRow');
+        row.layer = this.node.layer;
+        const w = this.listContainer?.getComponent(UITransform)?.width || 600;
+        row.addComponent(UITransform).setContentSize(w, 45);
+        
+        // 排名图标
+        let rankIcon = `${rank}`;
+        if (rank === 1) rankIcon = '🥇';
+        else if (rank === 2) rankIcon = '🥈';
+        else if (rank === 3) rankIcon = '🥉';
+        
+        const rankLabel = this.createLabel(rankIcon, -w/2 + 50, 0, rank <= 3 ? 24 : 18);
+        row.addChild(rankLabel);
+        
+        // 玩家名
+        const nameLabel = this.createLabel(player.name, -w/2 + 150, 0, 16);
+        const nameTrans = nameLabel.getComponent(UITransform)!;
+        nameTrans.setAnchorPoint(0, 0.5);
+        row.addChild(nameLabel);
+        
+        // 分数
+        const scoreLabel = this.createLabel(`${player.score}`, w/2 - 50, 0, 18);
+        scoreLabel.getComponent(Label)!.color = new Color(100, 200, 255);
+        row.addChild(scoreLabel);
+        
+        row.setPosition(0, y, 0);
+        return row;
+    }
+
+    updateMyRank(type: LeaderboardType, data: PlayerData[]) {
+        const myIndex = data.findIndex(p => p.name === this.playerName);
+        if (myIndex >= 0 && this.myRankLabel) {
+            const myScore = data[myIndex].score;
+            this.myRankLabel.string = `我的排名: 第${myIndex + 1}名 (${myScore}分)`;
         }
     }
 
-    loadData() {
-        // 模拟排行榜数据（实际项目应从服务器获取）
-        this.rankings = this.generateMockRankings();
+    showToast(text: string) {
+        const toast = new Node('Toast');
+        toast.layer = this.node.layer;
+        const gfx = toast.addComponent(Graphics);
+        toast.addComponent(UITransform).setContentSize(200, 40);
+        
+        gfx.fillColor = new Color(0, 0, 0, 200);
+        gfx.roundRect(-100, -20, 200, 40, 8);
+        gfx.fill();
+        
+        const label = this.createLabel(text, 0, 0, 14);
+        toast.addChild(label);
+        
+        toast.setPosition(0, 0, 0);
+        toast.setScale(new Vec3(0, 0, 1));
+        this.container?.addChild(toast);
+        
+        tween(toast)
+            .to(0.15, { scale: new Vec3(1, 1, 1) })
+            .delay(1)
+            .to(0.15, { scale: new Vec3(0, 0, 1) })
+            .call(() => toast.destroy())
+            .start();
     }
 
-    generateMockRankings(): {name: string, score: number}[] {
-        const names = ['小明', '小红', '小刚', '小丽', '小华', '小强', '小芳', '小军', '小英', '小伟'];
-        const rankings: {name: string, score: number}[] = [];
-        
-        let baseScore: number;
-        switch (this.currentType) {
-            case 'match3_score':
-                baseScore = 5000;
-                break;
-            case 'merge_level':
-                baseScore = 8;
-                break;
-            case 'puppy_love':
-                baseScore = 500;
-                break;
-            default:
-                baseScore = 1000;
-        }
-        
-        for (let i = 0; i < 10; i++) {
-            rankings.push({
-                name: names[i],
-                score: Math.floor(baseScore * (1 - i * 0.08) + Math.random() * baseScore * 0.1)
-            });
-        }
-        
-        return rankings.sort((a, b) => b.score - a.score);
-    }
-
-    clearAll() {
-        this.container?.destroy();
-        this.container = null;
-    }
-
+    // =================== 工具 ===================
     createLabel(text: string, x: number, y: number, fontSize: number): Node {
         const node = new Node('Label');
         node.layer = this.node.layer;
-        node.addComponent(UITransform).setContentSize(200, fontSize + 20);
+        node.addComponent(UITransform).setContentSize(200, fontSize + 10);
         const label = node.addComponent(Label);
         label.string = text;
         label.fontSize = fontSize;
-        label.lineHeight = fontSize + 10;
+        label.lineHeight = fontSize + 5;
         label.color = Color.WHITE;
         node.setPosition(x, y, 0);
-        return node;
-    }
-
-    createButton(text: string, x: number, y: number, width: number, height: number, callback: () => void): Node {
-        const node = new Node('Button');
-        node.layer = this.node.layer;
-        node.addComponent(UITransform).setContentSize(width, height);
-        const graphics = node.addComponent(Graphics);
-        graphics.fillColor = new Color(80, 150, 255, 230);
-        graphics.roundRect(-width/2, -height/2, width, height, 8);
-        graphics.fill();
-        const labelNode = this.createLabel(text, 0, 0, 18);
-        node.addChild(labelNode);
-        node.setPosition(x, y, 0);
-        node.on(Node.EventType.TOUCH_END, callback, this);
         return node;
     }
 }
