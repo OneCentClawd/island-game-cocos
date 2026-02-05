@@ -2,44 +2,79 @@ import { _decorator, Component, Node, Label, UITransform, Color, Size, Vec3, twe
 const { ccclass, property } = _decorator;
 
 /**
- * 关卡配置
+ * 消消乐元素类型
  */
-const LEVELS = [
-    { id: 1, moves: 20, target: { type: 'score', value: 500 }, gems: 4 },
-    { id: 2, moves: 18, target: { type: 'score', value: 800 }, gems: 4 },
-    { id: 3, moves: 20, target: { type: 'gem', gemType: 0, value: 15 }, gems: 4 },
-    { id: 4, moves: 18, target: { type: 'score', value: 1200 }, gems: 5 },
-    { id: 5, moves: 22, target: { type: 'gem', gemType: 1, value: 20 }, gems: 5 },
-    { id: 6, moves: 20, target: { type: 'score', value: 1500 }, gems: 5 },
-    { id: 7, moves: 18, target: { type: 'gem', gemType: 2, value: 18 }, gems: 5 },
-    { id: 8, moves: 25, target: { type: 'score', value: 2000 }, gems: 5 },
-    { id: 9, moves: 20, target: { type: 'gem', gemType: 3, value: 22 }, gems: 5 },
-    { id: 10, moves: 22, target: { type: 'score', value: 2500 }, gems: 5 },
-    { id: 11, moves: 18, target: { type: 'score', value: 3000 }, gems: 6 },
-    { id: 12, moves: 20, target: { type: 'gem', gemType: 4, value: 25 }, gems: 6 },
-];
+const MATCH3_TYPES = ['wood', 'stone', 'coin', 'star', 'heart', 'diamond'];
+const MATCH3_EMOJIS: {[key: string]: string} = {
+    wood: '🌲',
+    stone: '⚪',
+    coin: '💰',
+    star: '⭐',
+    heart: '❤️',
+    diamond: '💎',
+};
+const MATCH3_COLORS: {[key: string]: Color} = {
+    wood: new Color(139, 69, 19),
+    stone: new Color(128, 128, 128),
+    coin: new Color(255, 215, 0),
+    star: new Color(255, 230, 109),
+    heart: new Color(255, 107, 107),
+    diamond: new Color(78, 205, 196),
+};
 
 /**
- * 宝石配置
+ * 关卡配置 (20关)
  */
-const GEMS = [
-    { id: 0, emoji: '🔴', name: '红宝石' },
-    { id: 1, emoji: '🟡', name: '黄宝石' },
-    { id: 2, emoji: '🟢', name: '绿宝石' },
-    { id: 3, emoji: '🔵', name: '蓝宝石' },
-    { id: 4, emoji: '🟣', name: '紫宝石' },
-    { id: 5, emoji: '🟠', name: '橙宝石' },
+const MATCH3_LEVELS = [
+    // 1-5关：入门，无障碍
+    { level: 1, moves: 30, target: { score: 300 }, stars: [300, 500, 800], reward: { coin: 50 } },
+    { level: 2, moves: 28, target: { score: 500 }, stars: [500, 800, 1200], reward: { coin: 60 } },
+    { level: 3, moves: 26, target: { score: 700 }, stars: [700, 1100, 1500], reward: { coin: 70 } },
+    { level: 4, moves: 25, target: { score: 900 }, stars: [900, 1400, 1900], reward: { coin: 80 } },
+    { level: 5, moves: 25, target: { score: 1200 }, stars: [1200, 1800, 2500], reward: { coin: 100, diamond: 1 } },
+    // 6-10关：引入冰块
+    { level: 6, moves: 25, target: { score: 1400, ice: 3 }, stars: [1400, 2100, 2800], reward: { coin: 100 }, obstacles: { ice: [[0,0],[7,7],[3,3]] } },
+    { level: 7, moves: 24, target: { score: 1600, ice: 5 }, stars: [1600, 2400, 3200], reward: { coin: 110 }, obstacles: { ice: [[0,0],[0,7],[7,0],[7,7],[3,3]] } },
+    { level: 8, moves: 24, target: { score: 1800, ice: 6 }, stars: [1800, 2700, 3600], reward: { coin: 120 }, obstacles: { ice: [[1,1],[1,6],[6,1],[6,6],[3,3],[4,4]] } },
+    { level: 9, moves: 23, target: { score: 2000, ice: 8 }, stars: [2000, 3000, 4000], reward: { coin: 130 }, obstacles: { ice: [[0,0],[0,7],[7,0],[7,7],[2,3],[2,4],[5,3],[5,4]] } },
+    { level: 10, moves: 20, target: { score: 2600, ice: 10 }, stars: [2600, 3900, 5200], reward: { coin: 150, diamond: 2 }, obstacles: { ice: [[0,3],[0,4],[3,0],[3,7],[4,0],[4,7],[7,3],[7,4],[3,3],[4,4]] } },
+    // 11-15关：引入石头
+    { level: 11, moves: 20, target: { score: 2800, stone: 4 }, stars: [2800, 4200, 5600], reward: { coin: 150 }, obstacles: { stone: [[3,3],[3,4],[4,3],[4,4]] } },
+    { level: 12, moves: 20, target: { score: 3000, stone: 6, ice: 6 }, stars: [3000, 4500, 6000], reward: { coin: 160 }, obstacles: { stone: [[2,2],[2,5],[5,2],[5,5],[3,3],[4,4]], ice: [[1,1],[1,6],[6,1],[6,6],[0,3],[7,4]] } },
+    { level: 13, moves: 18, target: { score: 3200, stone: 8 }, stars: [3200, 4800, 6400], reward: { coin: 170 }, obstacles: { stone: [[2,2],[2,3],[2,4],[2,5],[5,2],[5,3],[5,4],[5,5]] } },
+    { level: 14, moves: 18, target: { score: 3400, stone: 6, ice: 8 }, stars: [3400, 5100, 6800], reward: { coin: 180 }, obstacles: { stone: [[3,2],[3,5],[4,2],[4,5],[3,3],[4,4]], ice: [[0,0],[0,7],[7,0],[7,7],[1,3],[1,4],[6,3],[6,4]] } },
+    { level: 15, moves: 18, target: { score: 3600, stone: 8, ice: 8 }, stars: [3600, 5400, 7200], reward: { coin: 200, diamond: 3 }, obstacles: { stone: [[2,2],[2,5],[5,2],[5,5],[3,3],[3,4],[4,3],[4,4]], ice: [[0,2],[0,5],[2,0],[2,7],[5,0],[5,7],[7,2],[7,5]] } },
+    // 16-20关：引入铁链
+    { level: 16, moves: 18, target: { score: 3800, chain: 6 }, stars: [3800, 5700, 7600], reward: { coin: 200 }, obstacles: { chain: [[2,2],[2,5],[5,2],[5,5],[3,3],[4,4]] } },
+    { level: 17, moves: 16, target: { score: 4000, chain: 8, ice: 6 }, stars: [4000, 6000, 8000], reward: { coin: 220 }, obstacles: { chain: [[1,1],[1,6],[6,1],[6,6],[3,2],[3,5],[4,2],[4,5]], ice: [[0,3],[0,4],[7,3],[7,4],[3,0],[4,7]] } },
+    { level: 18, moves: 16, target: { score: 4200, chain: 8, stone: 4 }, stars: [4200, 6300, 8400], reward: { coin: 240 }, obstacles: { chain: [[2,1],[2,6],[5,1],[5,6],[3,2],[3,5],[4,2],[4,5]], stone: [[3,3],[3,4],[4,3],[4,4]] } },
+    { level: 19, moves: 15, target: { score: 4400, chain: 10, ice: 8 }, stars: [4400, 6600, 8800], reward: { coin: 260 }, obstacles: { chain: [[1,2],[1,3],[1,4],[1,5],[6,2],[6,3],[6,4],[6,5],[3,1],[4,6]], ice: [[0,0],[0,7],[7,0],[7,7],[2,3],[2,4],[5,3],[5,4]] } },
+    { level: 20, moves: 15, target: { score: 5000, chain: 10, stone: 6, ice: 8 }, stars: [5000, 7500, 10000], reward: { coin: 500, diamond: 5 }, obstacles: { chain: [[1,1],[1,6],[6,1],[6,6],[2,3],[2,4],[5,3],[5,4],[3,2],[4,5]], stone: [[3,3],[3,4],[4,3],[4,4],[2,2],[5,5]], ice: [[0,2],[0,5],[2,0],[2,7],[5,0],[5,7],[7,2],[7,5]] } },
 ];
 
-const GRID_SIZE = 8;
-const CELL_SIZE = 65;
+const GRID_COLS = 8;
+const GRID_ROWS = 8;
+const TILE_SIZE = 45;
 
-interface GemNode {
+interface Tile {
     node: Node;
-    type: number;
+    type: string;
     row: number;
     col: number;
-    isSpecial?: 'bomb' | 'rainbow';
+    special?: 'stripe_h' | 'stripe_v' | 'rainbow';  // 特殊方块
+    ice?: number;   // 冰层数
+    chain?: boolean;  // 铁链
+    obstacle?: 'stone';  // 障碍物
+    hp?: number;  // 石头血量
+}
+
+interface LevelConfig {
+    level: number;
+    moves: number;
+    target: {score: number; ice?: number; stone?: number; chain?: number};
+    stars: number[];
+    reward: {coin: number; diamond?: number};
+    obstacles?: {ice?: number[][]; stone?: number[][]; chain?: number[][]};
 }
 
 /**
@@ -48,785 +83,857 @@ interface GemNode {
 @ccclass('Match3Game')
 export class Match3Game extends Component {
     // 游戏状态
-    private grid: (GemNode | null)[][] = [];
+    private board: (Tile | null)[][] = [];
+    private selectedTile: Tile | null = null;
     private score: number = 0;
-    private moves: number = 30;
-    private currentLevel: number = 1;
-    private levelConfig: typeof LEVELS[0] | null = null;
-    private gemCount: number[] = [0, 0, 0, 0, 0, 0];
-    private selectedGem: GemNode | null = null;
+    private moves: number = 20;
+    private level: number = 1;
+    private levelConfig: LevelConfig | null = null;
     private isProcessing: boolean = false;
-    private gameState: 'menu' | 'levelSelect' | 'playing' | 'win' | 'lose' = 'menu';
+    private gameOver: boolean = false;
+    private won: boolean = false;
+    private stars: number = 0;
+    private combo: number = 0;
 
-    // 道具
-    private bombs: number = 3;
-    private rainbows: number = 2;
-    private selectedTool: 'none' | 'bomb' | 'rainbow' = 'none';
+    // 障碍物计数
+    private iceCleared: number = 0;
+    private stoneCleared: number = 0;
+    private chainCleared: number = 0;
+
+    // 最高关卡解锁
+    private unlockedLevel: number = 1;
+    private levelStars: number[] = [];  // 每关获得的星数
 
     // UI引用
+    private gameContainer: Node | null = null;
+    private gridContainer: Node | null = null;
     private scoreLabel: Label | null = null;
     private movesLabel: Label | null = null;
     private targetLabel: Label | null = null;
-    private gridContainer: Node | null = null;
-    private menuContainer: Node | null = null;
-    private levelSelectContainer: Node | null = null;
-    private gameContainer: Node | null = null;
-    private toolsContainer: Node | null = null;
+    private infoLabel: Label | null = null;
+
+    // 当前场景
+    private currentScene: 'levelSelect' | 'game' = 'levelSelect';
 
     start() {
-        console.log('🧩 消消乐 start');
-        this.showMainMenu();
-    }
-
-    // =================== 主菜单 ===================
-    showMainMenu() {
-        this.clearAll();
-        this.gameState = 'menu';
-
-        this.menuContainer = new Node('MenuContainer');
-        this.menuContainer.layer = this.node.layer;
-        this.menuContainer.addComponent(UITransform).setContentSize(800, 600);
-        this.node.addChild(this.menuContainer);
-
-        // 标题
-        const title = this.createLabel('🧩 消消乐', 0, 150, 60);
-        this.menuContainer.addChild(title);
-
-        // 开始按钮
-        const startBtn = this.createButton('开始游戏', 0, 0, 200, 60, () => {
-            this.showLevelSelect();
-        });
-        this.menuContainer.addChild(startBtn);
-
-        // 继续按钮（如果有存档）
-        const savedLevel = this.loadProgress();
-        if (savedLevel > 1) {
-            const continueBtn = this.createButton(`继续 (第${savedLevel}关)`, 0, -80, 200, 60, () => {
-                this.currentLevel = savedLevel;
-                this.startLevel(savedLevel);
-            });
-            this.menuContainer.addChild(continueBtn);
-        }
+        console.log('🧩 消消乐 - 完整版');
+        this.loadProgress();
+        this.showLevelSelect();
     }
 
     // =================== 关卡选择 ===================
-    showLevelSelect() {
-        this.clearAll();
-        this.gameState = 'levelSelect';
 
-        this.levelSelectContainer = new Node('LevelSelectContainer');
-        this.levelSelectContainer.layer = this.node.layer;
-        this.levelSelectContainer.addComponent(UITransform).setContentSize(800, 700);
-        this.node.addChild(this.levelSelectContainer);
+    showLevelSelect() {
+        this.currentScene = 'levelSelect';
+        this.clearAll();
+
+        this.gameContainer = new Node('LevelSelect');
+        this.gameContainer.layer = this.node.layer;
+        this.gameContainer.addComponent(UITransform).setContentSize(800, 800);
+        this.node.addChild(this.gameContainer);
+
+        // 背景
+        const bg = new Node('Background');
+        bg.layer = this.node.layer;
+        const graphics = bg.addComponent(Graphics);
+        bg.addComponent(UITransform).setContentSize(800, 800);
+        graphics.fillColor = new Color(78, 205, 196);
+        graphics.rect(-400, -400, 800, 800);
+        graphics.fill();
+        this.gameContainer.addChild(bg);
 
         // 标题
-        const title = this.createLabel('选择关卡', 0, 280, 40);
-        this.levelSelectContainer.addChild(title);
+        const title = this.createLabel('🧩 消消乐', 0, 320, 36);
+        this.gameContainer.addChild(title);
 
-        // 关卡按钮
-        const unlockedLevel = this.loadProgress();
-        const cols = 4;
-        const btnSize = 80;
-        const spacing = 100;
+        // 关卡网格
+        const cols = 5;
+        const rows = 4;
+        const btnSize = 65;
+        const spacing = 75;
         const startX = -(cols - 1) * spacing / 2;
-        const startY = 150;
+        const startY = 180;
 
-        for (let i = 0; i < LEVELS.length; i++) {
+        for (let i = 0; i < 20; i++) {
             const row = Math.floor(i / cols);
             const col = i % cols;
             const x = startX + col * spacing;
             const y = startY - row * spacing;
             const levelNum = i + 1;
-            const isUnlocked = levelNum <= unlockedLevel;
+            const unlocked = levelNum <= this.unlockedLevel;
+            const starCount = this.levelStars[i] || 0;
 
-            const btn = this.createLevelButton(levelNum, x, y, btnSize, isUnlocked, () => {
-                if (isUnlocked) {
-                    this.startLevel(levelNum);
-                }
-            });
-            this.levelSelectContainer.addChild(btn);
+            const btn = this.createLevelButton(levelNum, x, y, btnSize, unlocked, starCount);
+            this.gameContainer.addChild(btn);
         }
 
         // 返回按钮
-        const backBtn = this.createButton('返回', 0, -250, 120, 50, () => {
+        const backBtn = this.createButton('← 返回', 0, -320, 120, 50, () => {
             director.loadScene('MainMenu');
         });
-        this.levelSelectContainer.addChild(backBtn);
+        this.gameContainer.addChild(backBtn);
     }
 
-    createLevelButton(level: number, x: number, y: number, size: number, unlocked: boolean, callback: () => void): Node {
+    createLevelButton(level: number, x: number, y: number, size: number, unlocked: boolean, stars: number): Node {
         const node = new Node(`Level_${level}`);
         node.layer = this.node.layer;
-        const transform = node.addComponent(UITransform);
-        transform.setContentSize(size, size);
+        node.addComponent(UITransform).setContentSize(size, size);
 
         const graphics = node.addComponent(Graphics);
+        
         if (unlocked) {
-            graphics.fillColor = new Color(100, 200, 100, 230);
+            graphics.fillColor = new Color(255, 230, 109);
         } else {
-            graphics.fillColor = new Color(100, 100, 100, 200);
+            graphics.fillColor = new Color(100, 100, 100);
         }
-        graphics.roundRect(-size/2, -size/2, size, size, 10);
+        graphics.roundRect(-size/2, -size/2, size, size, 12);
         graphics.fill();
 
-        const label = this.createLabel(unlocked ? `${level}` : '🔒', 0, 0, 28);
+        // 关卡数字
+        const label = this.createLabel(unlocked ? level.toString() : '🔒', 0, 5, 22);
+        label.getComponent(Label)!.color = unlocked ? new Color(44, 62, 80) : new Color(150, 150, 150);
         node.addChild(label);
 
+        // 星星
+        if (unlocked && stars > 0) {
+            const starsText = '⭐'.repeat(stars);
+            const starsLabel = this.createLabel(starsText, 0, -20, 10);
+            node.addChild(starsLabel);
+        }
+
         node.setPosition(x, y, 0);
+
         if (unlocked) {
-            node.on(Node.EventType.TOUCH_END, callback, this);
+            node.on(Node.EventType.TOUCH_END, () => {
+                this.startLevel(level);
+            }, this);
         }
 
         return node;
     }
 
     // =================== 游戏主逻辑 ===================
+
     startLevel(level: number) {
-        this.clearAll();
-        this.gameState = 'playing';
-        this.currentLevel = level;
-        this.levelConfig = LEVELS[level - 1] || LEVELS[0];
+        this.level = level;
+        this.levelConfig = MATCH3_LEVELS[level - 1];
+        this.currentScene = 'game';
+        
         this.score = 0;
         this.moves = this.levelConfig.moves;
-        this.gemCount = [0, 0, 0, 0, 0, 0];
-        this.selectedGem = null;
-        this.selectedTool = 'none';
+        this.combo = 0;
+        this.iceCleared = 0;
+        this.stoneCleared = 0;
+        this.chainCleared = 0;
+        this.gameOver = false;
+        this.won = false;
+        this.selectedTile = null;
+        this.isProcessing = false;
 
-        this.createGameUI();
-        this.initGrid();
+        this.clearAll();
+        this.initGameUI();
+        this.initBoard();
     }
 
-    createGameUI() {
+    initGameUI() {
         this.gameContainer = new Node('GameContainer');
         this.gameContainer.layer = this.node.layer;
         this.gameContainer.addComponent(UITransform).setContentSize(800, 800);
         this.node.addChild(this.gameContainer);
 
+        // 背景
+        const bg = new Node('Background');
+        bg.layer = this.node.layer;
+        const graphics = bg.addComponent(Graphics);
+        bg.addComponent(UITransform).setContentSize(800, 800);
+        graphics.fillColor = new Color(44, 62, 80);
+        graphics.rect(-400, -400, 800, 800);
+        graphics.fill();
+        this.gameContainer.addChild(bg);
+
         // 顶部信息栏
-        const topBar = new Node('TopBar');
-        topBar.layer = this.node.layer;
-        topBar.addComponent(UITransform).setContentSize(600, 80);
-        topBar.setPosition(0, 320, 0);
-        this.gameContainer.addChild(topBar);
-
-        // 关卡
-        const levelLabel = this.createLabel(`第 ${this.currentLevel} 关`, -200, 0, 28);
-        topBar.addChild(levelLabel);
-
-        // 分数
-        const scoreNode = this.createLabel(`分数: ${this.score}`, 0, 0, 28);
-        this.scoreLabel = scoreNode.getComponent(Label);
-        topBar.addChild(scoreNode);
-
-        // 步数
-        const movesNode = this.createLabel(`步数: ${this.moves}`, 200, 0, 28);
-        this.movesLabel = movesNode.getComponent(Label);
-        topBar.addChild(movesNode);
-
-        // 目标
-        const targetText = this.getTargetText();
-        const targetNode = this.createLabel(targetText, 0, 270, 22);
-        this.targetLabel = targetNode.getComponent(Label);
-        this.gameContainer.addChild(targetNode);
+        this.drawTopBar();
 
         // 棋盘容器
-        this.gridContainer = new Node('GridContainer');
-        this.gridContainer.layer = this.node.layer;
-        const gridTransform = this.gridContainer.addComponent(UITransform);
-        gridTransform.setContentSize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
-        gridTransform.setAnchorPoint(0, 0);
-        this.gridContainer.setPosition(-GRID_SIZE * CELL_SIZE / 2, -GRID_SIZE * CELL_SIZE / 2 + 20, 0);
-        this.gameContainer.addChild(this.gridContainer);
+        this.drawGridContainer();
 
-        // 绘制棋盘背景
-        this.drawGridBackground();
-
-        // 道具栏
-        this.createToolsBar();
-
-        // 返回按钮
-        const backBtn = this.createButton('退出', -280, 320, 80, 40, () => {
+        // 底部按钮
+        const backBtn = this.createButton('← 退出', -120, -340, 100, 45, () => {
             this.showLevelSelect();
         });
         this.gameContainer.addChild(backBtn);
+
+        const restartBtn = this.createButton('🔄 重玩', 120, -340, 100, 45, () => {
+            this.startLevel(this.level);
+        });
+        this.gameContainer.addChild(restartBtn);
     }
 
-    createToolsBar() {
-        this.toolsContainer = new Node('ToolsContainer');
-        this.toolsContainer.layer = this.node.layer;
-        this.toolsContainer.addComponent(UITransform).setContentSize(400, 60);
-        this.toolsContainer.setPosition(0, -320, 0);
-        this.gameContainer?.addChild(this.toolsContainer);
-
-        // 炸弹道具
-        const bombBtn = this.createToolButton('💣', this.bombs, -80, () => {
-            if (this.bombs > 0 && !this.isProcessing) {
-                this.selectedTool = this.selectedTool === 'bomb' ? 'none' : 'bomb';
-                this.updateToolsUI();
-            }
-        });
-        this.toolsContainer.addChild(bombBtn);
-
-        // 彩虹道具
-        const rainbowBtn = this.createToolButton('🌈', this.rainbows, 80, () => {
-            if (this.rainbows > 0 && !this.isProcessing) {
-                this.selectedTool = this.selectedTool === 'rainbow' ? 'none' : 'rainbow';
-                this.updateToolsUI();
-            }
-        });
-        this.toolsContainer.addChild(rainbowBtn);
-    }
-
-    createToolButton(emoji: string, count: number, x: number, callback: () => void): Node {
-        const node = new Node(`Tool_${emoji}`);
-        node.layer = this.node.layer;
-        node.addComponent(UITransform).setContentSize(70, 50);
-
-        const graphics = node.addComponent(Graphics);
-        graphics.fillColor = new Color(80, 80, 120, 230);
-        graphics.roundRect(-35, -25, 70, 50, 8);
+    drawTopBar() {
+        const bar = new Node('TopBar');
+        bar.layer = this.node.layer;
+        const graphics = bar.addComponent(Graphics);
+        bar.addComponent(UITransform).setContentSize(380, 80);
+        bar.setPosition(0, 330, 0);
+        
+        graphics.fillColor = new Color(0, 0, 0, 180);
+        graphics.roundRect(-190, -40, 380, 80, 12);
         graphics.fill();
+        
+        this.gameContainer?.addChild(bar);
 
-        const label = this.createLabel(`${emoji}×${count}`, 0, 0, 20);
-        node.addChild(label);
+        // 关卡
+        const levelLabel = this.createLabel(`第 ${this.level} 关`, 0, 20, 18);
+        bar.addChild(levelLabel);
 
-        node.setPosition(x, 0, 0);
-        node.on(Node.EventType.TOUCH_END, callback, this);
+        // 分数
+        const scoreNode = this.createLabel(`分数: ${this.score}`, -100, -15, 16);
+        this.scoreLabel = scoreNode.getComponent(Label);
+        bar.addChild(scoreNode);
 
-        return node;
-    }
+        // 步数
+        const movesNode = this.createLabel(`步数: ${this.moves}`, 100, -15, 16);
+        this.movesLabel = movesNode.getComponent(Label);
+        bar.addChild(movesNode);
 
-    updateToolsUI() {
-        // 简单实现：重建道具栏
-        if (this.toolsContainer) {
-            this.toolsContainer.destroyAllChildren();
+        // 目标
+        if (this.levelConfig) {
+            let targetText = `目标: ${this.levelConfig.target.score}分`;
+            if (this.levelConfig.target.ice) targetText += ` ❄️${this.levelConfig.target.ice}`;
+            if (this.levelConfig.target.stone) targetText += ` 🪨${this.levelConfig.target.stone}`;
+            if (this.levelConfig.target.chain) targetText += ` ⛓️${this.levelConfig.target.chain}`;
             
-            const bombBtn = this.createToolButton('💣', this.bombs, -80, () => {
-                if (this.bombs > 0 && !this.isProcessing) {
-                    this.selectedTool = this.selectedTool === 'bomb' ? 'none' : 'bomb';
-                    this.updateToolsUI();
-                }
-            });
-            if (this.selectedTool === 'bomb') {
-                bombBtn.getComponent(Graphics)!.fillColor = new Color(255, 150, 50, 230);
-            }
-            this.toolsContainer.addChild(bombBtn);
-
-            const rainbowBtn = this.createToolButton('🌈', this.rainbows, 80, () => {
-                if (this.rainbows > 0 && !this.isProcessing) {
-                    this.selectedTool = this.selectedTool === 'rainbow' ? 'none' : 'rainbow';
-                    this.updateToolsUI();
-                }
-            });
-            if (this.selectedTool === 'rainbow') {
-                rainbowBtn.getComponent(Graphics)!.fillColor = new Color(255, 150, 50, 230);
-            }
-            this.toolsContainer.addChild(rainbowBtn);
+            const targetNode = this.createLabel(targetText, 0, 260, 14);
+            this.targetLabel = targetNode.getComponent(Label);
+            this.gameContainer?.addChild(targetNode);
         }
     }
 
-    getTargetText(): string {
-        if (!this.levelConfig) return '';
-        const target = this.levelConfig.target;
-        if (target.type === 'score') {
-            return `目标: 得分 ${this.score}/${target.value}`;
-        } else {
-            const gem = GEMS[target.gemType!];
-            return `目标: 消除 ${gem.emoji} ${this.gemCount[target.gemType!]}/${target.value}`;
-        }
-    }
+    drawGridContainer() {
+        const gridW = GRID_COLS * TILE_SIZE;
+        const gridH = GRID_ROWS * TILE_SIZE;
 
-    drawGridBackground() {
-        if (!this.gridContainer) return;
+        this.gridContainer = new Node('GridContainer');
+        this.gridContainer.layer = this.node.layer;
+        const transform = this.gridContainer.addComponent(UITransform);
+        transform.setContentSize(gridW, gridH);
+        transform.setAnchorPoint(0, 0);
+        this.gridContainer.setPosition(-gridW / 2, -gridH / 2 - 20, 0);
+        this.gameContainer?.addChild(this.gridContainer);
 
+        // 绘制格子背景
         const bg = new Node('GridBg');
         bg.layer = this.node.layer;
         const graphics = bg.addComponent(Graphics);
-        bg.addComponent(UITransform).setContentSize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
-        
-        for (let row = 0; row < GRID_SIZE; row++) {
-            for (let col = 0; col < GRID_SIZE; col++) {
-                const x = col * CELL_SIZE;
-                const y = (GRID_SIZE - 1 - row) * CELL_SIZE;
+        bg.addComponent(UITransform).setContentSize(gridW, gridH);
+
+        for (let row = 0; row < GRID_ROWS; row++) {
+            for (let col = 0; col < GRID_COLS; col++) {
+                const x = col * TILE_SIZE;
+                const y = row * TILE_SIZE;
                 const isLight = (row + col) % 2 === 0;
                 
-                graphics.fillColor = isLight ? new Color(60, 80, 100, 200) : new Color(40, 60, 80, 200);
-                graphics.roundRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4, 8);
+                graphics.fillColor = isLight ? new Color(60, 80, 100) : new Color(50, 70, 90);
+                graphics.roundRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2, 6);
                 graphics.fill();
             }
         }
-        
         this.gridContainer.addChild(bg);
     }
 
-    initGrid() {
-        this.grid = [];
-        for (let row = 0; row < GRID_SIZE; row++) {
-            this.grid[row] = [];
-            for (let col = 0; col < GRID_SIZE; col++) {
-                this.grid[row][col] = null;
+    initBoard() {
+        this.board = [];
+        
+        // 初始化空棋盘
+        for (let row = 0; row < GRID_ROWS; row++) {
+            this.board[row] = [];
+            for (let col = 0; col < GRID_COLS; col++) {
+                this.board[row][col] = null;
             }
         }
 
-        const gemTypes = this.levelConfig?.gems || 5;
-        for (let row = 0; row < GRID_SIZE; row++) {
-            for (let col = 0; col < GRID_SIZE; col++) {
-                let type: number;
-                do {
-                    type = Math.floor(Math.random() * gemTypes);
-                } while (this.wouldMatch(row, col, type));
-                
-                this.createGem(row, col, type);
+        // 放置障碍物
+        if (this.levelConfig?.obstacles) {
+            // 石头
+            if (this.levelConfig.obstacles.stone) {
+                for (const [col, row] of this.levelConfig.obstacles.stone) {
+                    if (row >= 0 && row < GRID_ROWS && col >= 0 && col < GRID_COLS) {
+                        this.board[row][col] = this.createObstacleTile(row, col, 'stone');
+                    }
+                }
+            }
+        }
+
+        // 填充方块（避免初始匹配）
+        for (let row = 0; row < GRID_ROWS; row++) {
+            for (let col = 0; col < GRID_COLS; col++) {
+                if (!this.board[row][col]) {
+                    let type: string;
+                    do {
+                        type = MATCH3_TYPES[Math.floor(Math.random() * MATCH3_TYPES.length)];
+                    } while (this.wouldMatch(row, col, type));
+                    
+                    const tile = this.createTile(row, col, type);
+                    this.board[row][col] = tile;
+
+                    // 添加冰块
+                    if (this.levelConfig?.obstacles?.ice) {
+                        for (const [iceCol, iceRow] of this.levelConfig.obstacles.ice) {
+                            if (iceRow === row && iceCol === col) {
+                                tile.ice = 1;
+                                this.updateTileDisplay(tile);
+                            }
+                        }
+                    }
+
+                    // 添加铁链
+                    if (this.levelConfig?.obstacles?.chain) {
+                        for (const [chainCol, chainRow] of this.levelConfig.obstacles.chain) {
+                            if (chainRow === row && chainCol === col) {
+                                tile.chain = true;
+                                this.updateTileDisplay(tile);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
-    wouldMatch(row: number, col: number, type: number): boolean {
+    wouldMatch(row: number, col: number, type: string): boolean {
+        // 检查左边两个
         if (col >= 2) {
-            const left1 = this.grid[row][col - 1];
-            const left2 = this.grid[row][col - 2];
-            if (left1 && left2 && left1.type === type && left2.type === type) {
-                return true;
-            }
+            const t1 = this.board[row][col - 1];
+            const t2 = this.board[row][col - 2];
+            if (t1 && t2 && t1.type === type && t2.type === type) return true;
         }
+        // 检查下边两个
         if (row >= 2) {
-            const up1 = this.grid[row - 1][col];
-            const up2 = this.grid[row - 2][col];
-            if (up1 && up2 && up1.type === type && up2.type === type) {
-                return true;
-            }
+            const t1 = this.board[row - 1][col];
+            const t2 = this.board[row - 2][col];
+            if (t1 && t2 && t1.type === type && t2.type === type) return true;
         }
         return false;
     }
 
-    createGem(row: number, col: number, type: number, isSpecial?: 'bomb' | 'rainbow'): GemNode {
-        const gem = GEMS[type];
-        const node = new Node(`Gem_${row}_${col}`);
+    createTile(row: number, col: number, type: string): Tile {
+        const node = new Node(`Tile_${row}_${col}`);
         node.layer = this.node.layer;
-        
-        const transform = node.addComponent(UITransform);
-        transform.setContentSize(CELL_SIZE - 4, CELL_SIZE - 4);
-        
-        let displayEmoji = gem.emoji;
-        if (isSpecial === 'bomb') displayEmoji = '💣';
-        if (isSpecial === 'rainbow') displayEmoji = '🌈';
-        
+        node.addComponent(UITransform).setContentSize(TILE_SIZE - 4, TILE_SIZE - 4);
+
+        // 背景
+        const graphics = node.addComponent(Graphics);
+        const color = MATCH3_COLORS[type] || new Color(100, 100, 100);
+        graphics.fillColor = color;
+        graphics.roundRect(-(TILE_SIZE-4)/2, -(TILE_SIZE-4)/2, TILE_SIZE - 4, TILE_SIZE - 4, 8);
+        graphics.fill();
+
+        // emoji
         const label = node.addComponent(Label);
-        label.string = displayEmoji;
-        label.fontSize = 40;
-        label.lineHeight = CELL_SIZE;
-        
-        const x = col * CELL_SIZE + CELL_SIZE / 2;
-        const y = (GRID_SIZE - 1 - row) * CELL_SIZE + CELL_SIZE / 2;
+        label.string = MATCH3_EMOJIS[type] || '?';
+        label.fontSize = 28;
+        label.lineHeight = TILE_SIZE;
+
+        const x = col * TILE_SIZE + TILE_SIZE / 2;
+        const y = row * TILE_SIZE + TILE_SIZE / 2;
         node.setPosition(x, y, 0);
-        
+
         this.gridContainer?.addChild(node);
-        
-        const gemNode: GemNode = { node, type, row, col, isSpecial };
-        this.grid[row][col] = gemNode;
-        
-        node.on(Node.EventType.TOUCH_END, () => this.onGemClick(gemNode), this);
-        
-        return gemNode;
+
+        const tile: Tile = { node, type, row, col };
+
+        // 点击事件
+        node.on(Node.EventType.TOUCH_END, () => {
+            this.onTileClick(tile);
+        }, this);
+
+        // 入场动画
+        node.setScale(new Vec3(0, 0, 1));
+        tween(node).to(0.2, { scale: new Vec3(1, 1, 1) }).start();
+
+        return tile;
     }
 
-    onGemClick(gem: GemNode) {
-        if (this.isProcessing || this.gameState !== 'playing') return;
+    createObstacleTile(row: number, col: number, obstacle: 'stone'): Tile {
+        const node = new Node(`Obstacle_${row}_${col}`);
+        node.layer = this.node.layer;
+        node.addComponent(UITransform).setContentSize(TILE_SIZE - 4, TILE_SIZE - 4);
 
-        // 使用道具
-        if (this.selectedTool === 'bomb' && this.bombs > 0) {
-            this.useBomb(gem.row, gem.col);
+        const graphics = node.addComponent(Graphics);
+        graphics.fillColor = new Color(120, 120, 120);
+        graphics.roundRect(-(TILE_SIZE-4)/2, -(TILE_SIZE-4)/2, TILE_SIZE - 4, TILE_SIZE - 4, 8);
+        graphics.fill();
+
+        const label = node.addComponent(Label);
+        label.string = '🪨';
+        label.fontSize = 28;
+        label.lineHeight = TILE_SIZE;
+
+        const x = col * TILE_SIZE + TILE_SIZE / 2;
+        const y = row * TILE_SIZE + TILE_SIZE / 2;
+        node.setPosition(x, y, 0);
+
+        this.gridContainer?.addChild(node);
+
+        return { node, type: 'stone', row, col, obstacle: 'stone', hp: 2 };
+    }
+
+    updateTileDisplay(tile: Tile) {
+        if (!tile.node) return;
+
+        // 冰层效果
+        if (tile.ice && tile.ice > 0) {
+            const iceNode = tile.node.getChildByName('IceOverlay') || new Node('IceOverlay');
+            iceNode.layer = this.node.layer;
+            if (!iceNode.parent) {
+                iceNode.addComponent(UITransform).setContentSize(TILE_SIZE, TILE_SIZE);
+                const label = iceNode.addComponent(Label);
+                label.string = '❄️';
+                label.fontSize = 14;
+                label.color = new Color(200, 230, 255, 180);
+                iceNode.setPosition(15, 15, 0);
+                tile.node.addChild(iceNode);
+            }
+        }
+
+        // 铁链效果
+        if (tile.chain) {
+            const chainNode = tile.node.getChildByName('ChainOverlay') || new Node('ChainOverlay');
+            chainNode.layer = this.node.layer;
+            if (!chainNode.parent) {
+                chainNode.addComponent(UITransform).setContentSize(TILE_SIZE, TILE_SIZE);
+                const label = chainNode.addComponent(Label);
+                label.string = '⛓️';
+                label.fontSize = 14;
+                chainNode.setPosition(-15, 15, 0);
+                tile.node.addChild(chainNode);
+            }
+        }
+    }
+
+    // =================== 交互逻辑 ===================
+
+    onTileClick(tile: Tile) {
+        if (this.isProcessing || this.gameOver) return;
+        if (tile.obstacle === 'stone') return;  // 石头不能选中
+        if (tile.chain) {
+            this.showInfo('需要先消除铁链！');
             return;
         }
-        if (this.selectedTool === 'rainbow' && this.rainbows > 0) {
-            this.useRainbow(gem.type);
-            return;
-        }
 
-        if (!this.selectedGem) {
-            this.selectedGem = gem;
-            this.highlightGem(gem, true);
-        } else if (this.selectedGem === gem) {
-            this.highlightGem(gem, false);
-            this.selectedGem = null;
-        } else if (this.isAdjacent(this.selectedGem, gem)) {
-            this.highlightGem(this.selectedGem, false);
-            this.trySwap(this.selectedGem, gem);
-            this.selectedGem = null;
+        if (this.selectedTile) {
+            const dx = Math.abs(this.selectedTile.col - tile.col);
+            const dy = Math.abs(this.selectedTile.row - tile.row);
+
+            if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) {
+                // 相邻，尝试交换
+                this.swapTiles(this.selectedTile, tile);
+            } else {
+                // 不相邻，重新选择
+                this.deselectTile();
+                this.selectTile(tile);
+            }
         } else {
-            this.highlightGem(this.selectedGem, false);
-            this.selectedGem = gem;
-            this.highlightGem(gem, true);
+            this.selectTile(tile);
         }
     }
 
-    async useBomb(row: number, col: number) {
-        this.bombs--;
-        this.selectedTool = 'none';
-        this.isProcessing = true;
-
-        const toRemove: GemNode[] = [];
-        for (let r = row - 1; r <= row + 1; r++) {
-            for (let c = col - 1; c <= col + 1; c++) {
-                if (r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE) {
-                    const g = this.grid[r][c];
-                    if (g) toRemove.push(g);
-                }
-            }
-        }
-
-        this.score += toRemove.length * 15;
-        for (const g of toRemove) {
-            this.gemCount[g.type]++;
-        }
-        this.updateUI();
-
-        await this.animateRemove(toRemove);
-        for (const g of toRemove) {
-            this.grid[g.row][g.col] = null;
-            g.node.destroy();
-        }
-
-        await this.dropGems();
-        await this.fillGems();
-        await this.processMatches();
-
-        this.updateToolsUI();
-        this.checkWinLose();
-        this.isProcessing = false;
-    }
-
-    async useRainbow(type: number) {
-        this.rainbows--;
-        this.selectedTool = 'none';
-        this.isProcessing = true;
-
-        const toRemove: GemNode[] = [];
-        for (let r = 0; r < GRID_SIZE; r++) {
-            for (let c = 0; c < GRID_SIZE; c++) {
-                const g = this.grid[r][c];
-                if (g && g.type === type) {
-                    toRemove.push(g);
-                }
-            }
-        }
-
-        this.score += toRemove.length * 20;
-        for (const g of toRemove) {
-            this.gemCount[g.type]++;
-        }
-        this.updateUI();
-
-        await this.animateRemove(toRemove);
-        for (const g of toRemove) {
-            this.grid[g.row][g.col] = null;
-            g.node.destroy();
-        }
-
-        await this.dropGems();
-        await this.fillGems();
-        await this.processMatches();
-
-        this.updateToolsUI();
-        this.checkWinLose();
-        this.isProcessing = false;
-    }
-
-    highlightGem(gem: GemNode, highlight: boolean) {
-        const scale = highlight ? 1.2 : 1.0;
-        tween(gem.node)
-            .to(0.1, { scale: new Vec3(scale, scale, 1) })
+    selectTile(tile: Tile) {
+        this.selectedTile = tile;
+        // 高亮效果
+        tween(tile.node)
+            .to(0.1, { scale: new Vec3(1.15, 1.15, 1) })
             .start();
     }
 
-    isAdjacent(a: GemNode, b: GemNode): boolean {
-        const rowDiff = Math.abs(a.row - b.row);
-        const colDiff = Math.abs(a.col - b.col);
-        return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+    deselectTile() {
+        if (this.selectedTile) {
+            tween(this.selectedTile.node)
+                .to(0.1, { scale: new Vec3(1, 1, 1) })
+                .start();
+            this.selectedTile = null;
+        }
     }
 
-    async trySwap(a: GemNode, b: GemNode) {
+    swapTiles(tile1: Tile, tile2: Tile) {
         this.isProcessing = true;
+        this.deselectTile();
 
-        await this.animateSwap(a, b);
-        this.swapGems(a, b);
+        const pos1 = tile1.node.position.clone();
+        const pos2 = tile2.node.position.clone();
 
-        const matches = this.findMatches();
-        
-        if (matches.length > 0) {
-            this.moves--;
-            this.updateUI();
-            await this.processMatches();
-            this.checkWinLose();
-        } else {
-            await this.animateSwap(a, b);
-            this.swapGems(a, b);
-        }
+        // 交换动画
+        tween(tile1.node).to(0.15, { position: pos2 }).start();
+        tween(tile2.node).to(0.15, { position: pos1 }).call(() => {
+            // 交换数据
+            const r1 = tile1.row, c1 = tile1.col;
+            const r2 = tile2.row, c2 = tile2.col;
 
-        this.isProcessing = false;
+            this.board[r1][c1] = tile2;
+            this.board[r2][c2] = tile1;
+            tile1.row = r2; tile1.col = c2;
+            tile2.row = r1; tile2.col = c1;
+
+            // 检查匹配
+            const matches = this.findMatches();
+            if (matches.length > 0) {
+                this.moves--;
+                this.updateUI();
+                this.combo = 0;
+                this.processMatches(matches);
+            } else {
+                // 换回来
+                this.scheduleOnce(() => {
+                    tween(tile1.node).to(0.15, { position: pos1 }).start();
+                    tween(tile2.node).to(0.15, { position: pos2 }).call(() => {
+                        this.board[r1][c1] = tile1;
+                        this.board[r2][c2] = tile2;
+                        tile1.row = r1; tile1.col = c1;
+                        tile2.row = r2; tile2.col = c2;
+                        this.isProcessing = false;
+                    }).start();
+                }, 0.1);
+                this.showInfo('无法消除！');
+            }
+        }).start();
     }
 
-    animateSwap(a: GemNode, b: GemNode): Promise<void> {
-        return new Promise(resolve => {
-            const posA = a.node.position.clone();
-            const posB = b.node.position.clone();
+    // =================== 消除逻辑 ===================
 
-            tween(a.node).to(0.15, { position: posB }).start();
-            tween(b.node).to(0.15, { position: posA }).call(resolve).start();
-        });
-    }
+    findMatches(): Tile[][] {
+        const matches: Tile[][] = [];
 
-    swapGems(a: GemNode, b: GemNode) {
-        this.grid[a.row][a.col] = b;
-        this.grid[b.row][b.col] = a;
-        [a.row, b.row] = [b.row, a.row];
-        [a.col, b.col] = [b.col, a.col];
-    }
+        // 横向检测
+        for (let row = 0; row < GRID_ROWS; row++) {
+            let col = 0;
+            while (col < GRID_COLS) {
+                const tile = this.board[row][col];
+                if (!tile || tile.obstacle || tile.chain) { col++; continue; }
 
-    findMatches(): GemNode[] {
-        const matched = new Set<GemNode>();
-
-        for (let row = 0; row < GRID_SIZE; row++) {
-            for (let col = 0; col < GRID_SIZE - 2; col++) {
-                const a = this.grid[row][col];
-                const b = this.grid[row][col + 1];
-                const c = this.grid[row][col + 2];
-                if (a && b && c && a.type === b.type && b.type === c.type) {
-                    matched.add(a);
-                    matched.add(b);
-                    matched.add(c);
+                let count = 1;
+                while (col + count < GRID_COLS) {
+                    const next = this.board[row][col + count];
+                    if (next && next.type === tile.type && !next.obstacle && !next.chain) {
+                        count++;
+                    } else break;
                 }
-            }
-        }
 
-        for (let row = 0; row < GRID_SIZE - 2; row++) {
-            for (let col = 0; col < GRID_SIZE; col++) {
-                const a = this.grid[row][col];
-                const b = this.grid[row + 1][col];
-                const c = this.grid[row + 2][col];
-                if (a && b && c && a.type === b.type && b.type === c.type) {
-                    matched.add(a);
-                    matched.add(b);
-                    matched.add(c);
-                }
-            }
-        }
-
-        return Array.from(matched);
-    }
-
-    async processMatches() {
-        let matches = this.findMatches();
-        
-        while (matches.length > 0) {
-            const points = matches.length * 10;
-            this.score += points;
-            
-            for (const gem of matches) {
-                this.gemCount[gem.type]++;
-            }
-            
-            this.updateUI();
-
-            await this.animateRemove(matches);
-
-            for (const gem of matches) {
-                this.grid[gem.row][gem.col] = null;
-                gem.node.destroy();
-            }
-
-            await this.dropGems();
-            await this.fillGems();
-
-            matches = this.findMatches();
-        }
-    }
-
-    animateRemove(gems: GemNode[]): Promise<void> {
-        return new Promise(resolve => {
-            if (gems.length === 0) {
-                resolve();
-                return;
-            }
-            let completed = 0;
-            for (const gem of gems) {
-                tween(gem.node)
-                    .to(0.2, { scale: new Vec3(0, 0, 1) })
-                    .call(() => {
-                        completed++;
-                        if (completed === gems.length) resolve();
-                    })
-                    .start();
-            }
-        });
-    }
-
-    async dropGems(): Promise<void> {
-        const drops: Promise<void>[] = [];
-
-        for (let col = 0; col < GRID_SIZE; col++) {
-            let emptyRow = GRID_SIZE - 1;
-            
-            for (let row = GRID_SIZE - 1; row >= 0; row--) {
-                const gem = this.grid[row][col];
-                if (gem) {
-                    if (row !== emptyRow) {
-                        this.grid[row][col] = null;
-                        this.grid[emptyRow][col] = gem;
-                        gem.row = emptyRow;
-
-                        const newY = (GRID_SIZE - 1 - emptyRow) * CELL_SIZE + CELL_SIZE / 2;
-                        drops.push(new Promise(resolve => {
-                            tween(gem.node)
-                                .to(0.2, { position: new Vec3(gem.node.position.x, newY, 0) })
-                                .call(resolve)
-                                .start();
-                        }));
+                if (count >= 3) {
+                    const matchTiles: Tile[] = [];
+                    for (let i = 0; i < count; i++) {
+                        matchTiles.push(this.board[row][col + i]!);
                     }
-                    emptyRow--;
+                    matches.push(matchTiles);
                 }
+                col += Math.max(1, count);
             }
         }
 
-        await Promise.all(drops);
-    }
+        // 纵向检测
+        for (let col = 0; col < GRID_COLS; col++) {
+            let row = 0;
+            while (row < GRID_ROWS) {
+                const tile = this.board[row][col];
+                if (!tile || tile.obstacle || tile.chain) { row++; continue; }
 
-    async fillGems(): Promise<void> {
-        const fills: Promise<void>[] = [];
-        const gemTypes = this.levelConfig?.gems || 5;
-
-        for (let col = 0; col < GRID_SIZE; col++) {
-            for (let row = 0; row < GRID_SIZE; row++) {
-                if (!this.grid[row][col]) {
-                    const type = Math.floor(Math.random() * gemTypes);
-                    const gem = this.createGem(row, col, type);
-                    
-                    const targetY = gem.node.position.y;
-                    gem.node.setPosition(gem.node.position.x, targetY + GRID_SIZE * CELL_SIZE, 0);
-                    gem.node.setScale(new Vec3(1, 1, 1));
-                    
-                    fills.push(new Promise(resolve => {
-                        tween(gem.node)
-                            .to(0.3, { position: new Vec3(gem.node.position.x, targetY, 0) })
-                            .call(resolve)
-                            .start();
-                    }));
+                let count = 1;
+                while (row + count < GRID_ROWS) {
+                    const next = this.board[row + count][col];
+                    if (next && next.type === tile.type && !next.obstacle && !next.chain) {
+                        count++;
+                    } else break;
                 }
+
+                if (count >= 3) {
+                    const matchTiles: Tile[] = [];
+                    for (let i = 0; i < count; i++) {
+                        matchTiles.push(this.board[row + i][col]!);
+                    }
+                    matches.push(matchTiles);
+                }
+                row += Math.max(1, count);
             }
         }
 
-        await Promise.all(fills);
+        return matches;
     }
+
+    processMatches(matches: Tile[][]) {
+        const toRemove = new Set<string>();
+        const adjacentPositions = new Set<string>();
+
+        for (const match of matches) {
+            for (const tile of match) {
+                toRemove.add(`${tile.row},${tile.col}`);
+                
+                // 记录相邻位置（用于处理障碍物）
+                [[tile.row-1, tile.col], [tile.row+1, tile.col], 
+                 [tile.row, tile.col-1], [tile.row, tile.col+1]].forEach(([r, c]) => {
+                    if (r >= 0 && r < GRID_ROWS && c >= 0 && c < GRID_COLS) {
+                        adjacentPositions.add(`${r},${c}`);
+                    }
+                });
+            }
+        }
+
+        // 计分
+        const baseScore = toRemove.size * 10;
+        const comboBonus = this.combo * 5;
+        this.score += baseScore + comboBonus;
+        this.combo++;
+
+        // 处理相邻的石头
+        adjacentPositions.forEach(key => {
+            const [r, c] = key.split(',').map(Number);
+            const tile = this.board[r][c];
+            if (tile && tile.obstacle === 'stone' && tile.hp) {
+                tile.hp--;
+                if (tile.hp <= 0) {
+                    this.board[r][c] = null;
+                    tile.node.destroy();
+                    this.stoneCleared++;
+                }
+            }
+        });
+
+        // 移除方块
+        toRemove.forEach(key => {
+            const [r, c] = key.split(',').map(Number);
+            const tile = this.board[r][c];
+            if (tile && !tile.obstacle) {
+                // 处理冰层
+                if (tile.ice && tile.ice > 0) {
+                    tile.ice--;
+                    this.iceCleared++;
+                    if (tile.ice > 0) return;  // 冰没碎完，不消除
+                }
+
+                // 处理铁链
+                if (tile.chain) {
+                    tile.chain = false;
+                    this.chainCleared++;
+                    const chainNode = tile.node.getChildByName('ChainOverlay');
+                    chainNode?.destroy();
+                    return;  // 铁链解开，但方块保留
+                }
+
+                // 消除动画
+                tween(tile.node)
+                    .to(0.15, { scale: new Vec3(0, 0, 1) })
+                    .call(() => tile.node.destroy())
+                    .start();
+                this.board[r][c] = null;
+            }
+        });
+
+        this.updateUI();
+
+        // 掉落和填充
+        this.scheduleOnce(() => {
+            this.dropTiles();
+            this.fillBoard();
+
+            this.scheduleOnce(() => {
+                const newMatches = this.findMatches();
+                if (newMatches.length > 0) {
+                    this.processMatches(newMatches);
+                } else {
+                    this.isProcessing = false;
+                    this.combo = 0;
+                    this.checkGameEnd();
+                }
+            }, 0.25);
+        }, 0.2);
+    }
+
+    dropTiles() {
+        for (let col = 0; col < GRID_COLS; col++) {
+            let emptyRow = -1;
+            
+            for (let row = 0; row < GRID_ROWS; row++) {
+                const tile = this.board[row][col];
+                
+                if (!tile) {
+                    if (emptyRow === -1) emptyRow = row;
+                } else if (tile.obstacle !== 'stone' && emptyRow !== -1) {
+                    // 移动方块下落
+                    this.board[emptyRow][col] = tile;
+                    this.board[row][col] = null;
+                    
+                    const newY = emptyRow * TILE_SIZE + TILE_SIZE / 2;
+                    tile.row = emptyRow;
+                    tween(tile.node).to(0.15, { position: new Vec3(tile.node.position.x, newY, 0) }).start();
+                    
+                    emptyRow++;
+                }
+            }
+        }
+    }
+
+    fillBoard() {
+        for (let col = 0; col < GRID_COLS; col++) {
+            for (let row = 0; row < GRID_ROWS; row++) {
+                if (!this.board[row][col]) {
+                    const type = MATCH3_TYPES[Math.floor(Math.random() * MATCH3_TYPES.length)];
+                    const tile = this.createTile(row, col, type);
+                    
+                    // 从上方掉落动画
+                    const startY = (GRID_ROWS + 2) * TILE_SIZE;
+                    tile.node.setPosition(col * TILE_SIZE + TILE_SIZE / 2, startY, 0);
+                    const targetY = row * TILE_SIZE + TILE_SIZE / 2;
+                    tween(tile.node).to(0.2, { position: new Vec3(tile.node.position.x, targetY, 0) }).start();
+                    
+                    this.board[row][col] = tile;
+                }
+            }
+        }
+    }
+
+    // =================== 游戏结束 ===================
+
+    checkGameEnd() {
+        if (this.gameOver) return;
+
+        const target = this.levelConfig?.target;
+        if (!target) return;
+
+        // 检查是否达成目标
+        let targetMet = this.score >= target.score;
+        if (target.ice && this.iceCleared < target.ice) targetMet = false;
+        if (target.stone && this.stoneCleared < target.stone) targetMet = false;
+        if (target.chain && this.chainCleared < target.chain) targetMet = false;
+
+        if (targetMet) {
+            this.gameOver = true;
+            this.won = true;
+            this.calculateStars();
+            this.showResult();
+        } else if (this.moves <= 0) {
+            this.gameOver = true;
+            this.won = false;
+            this.showResult();
+        }
+    }
+
+    calculateStars() {
+        const stars = this.levelConfig?.stars || [0, 0, 0];
+        if (this.score >= stars[2]) this.stars = 3;
+        else if (this.score >= stars[1]) this.stars = 2;
+        else if (this.score >= stars[0]) this.stars = 1;
+        else this.stars = 0;
+    }
+
+    showResult() {
+        const resultContainer = new Node('Result');
+        resultContainer.layer = this.node.layer;
+        resultContainer.addComponent(UITransform).setContentSize(350, 300);
+        this.gameContainer?.addChild(resultContainer);
+
+        // 背景
+        const bg = new Node('ResultBg');
+        bg.layer = this.node.layer;
+        const graphics = bg.addComponent(Graphics);
+        bg.addComponent(UITransform).setContentSize(350, 300);
+        graphics.fillColor = new Color(0, 0, 0, 230);
+        graphics.roundRect(-175, -150, 350, 300, 20);
+        graphics.fill();
+        resultContainer.addChild(bg);
+
+        // 标题
+        const title = this.createLabel(this.won ? '🎉 过关！' : '😢 失败', 0, 100, 32);
+        resultContainer.addChild(title);
+
+        // 分数
+        const scoreLabel = this.createLabel(`分数: ${this.score}`, 0, 50, 22);
+        resultContainer.addChild(scoreLabel);
+
+        // 星星
+        if (this.won) {
+            const starsText = '⭐'.repeat(this.stars) + '☆'.repeat(3 - this.stars);
+            const starsLabel = this.createLabel(starsText, 0, 10, 30);
+            resultContainer.addChild(starsLabel);
+
+            // 奖励
+            if (this.levelConfig?.reward) {
+                let rewardText = `奖励: 💰${this.levelConfig.reward.coin}`;
+                if (this.levelConfig.reward.diamond) {
+                    rewardText += ` 💎${this.levelConfig.reward.diamond}`;
+                }
+                const rewardLabel = this.createLabel(rewardText, 0, -30, 16);
+                resultContainer.addChild(rewardLabel);
+            }
+
+            // 更新进度
+            if (this.level >= this.unlockedLevel) {
+                this.unlockedLevel = Math.min(20, this.level + 1);
+            }
+            if (!this.levelStars[this.level - 1] || this.levelStars[this.level - 1] < this.stars) {
+                this.levelStars[this.level - 1] = this.stars;
+            }
+            this.saveProgress();
+        }
+
+        // 按钮
+        const backBtn = this.createButton('返回', -70, -100, 100, 45, () => {
+            this.showLevelSelect();
+        });
+        resultContainer.addChild(backBtn);
+
+        if (this.won && this.level < 20) {
+            const nextBtn = this.createButton('下一关', 70, -100, 100, 45, () => {
+                this.startLevel(this.level + 1);
+            });
+            resultContainer.addChild(nextBtn);
+        } else {
+            const retryBtn = this.createButton('重试', 70, -100, 100, 45, () => {
+                this.startLevel(this.level);
+            });
+            resultContainer.addChild(retryBtn);
+        }
+    }
+
+    // =================== UI更新 ===================
 
     updateUI() {
         if (this.scoreLabel) this.scoreLabel.string = `分数: ${this.score}`;
         if (this.movesLabel) this.movesLabel.string = `步数: ${this.moves}`;
-        if (this.targetLabel) this.targetLabel.string = this.getTargetText();
     }
 
-    checkWinLose() {
-        if (!this.levelConfig) return;
-
-        const target = this.levelConfig.target;
-        let achieved = false;
-
-        if (target.type === 'score') {
-            achieved = this.score >= target.value;
-        } else {
-            achieved = this.gemCount[target.gemType!] >= target.value;
-        }
-
-        if (achieved) {
-            this.gameState = 'win';
-            this.saveProgress(this.currentLevel + 1);
-            this.showResultScreen(true);
-        } else if (this.moves <= 0) {
-            this.gameState = 'lose';
-            this.showResultScreen(false);
-        }
-    }
-
-    showResultScreen(win: boolean) {
-        const overlay = new Node('ResultOverlay');
-        overlay.layer = this.node.layer;
-        overlay.addComponent(UITransform).setContentSize(800, 800);
-        this.node.addChild(overlay);
-
-        // 半透明背景
-        const bg = new Node('Bg');
-        bg.layer = this.node.layer;
-        const graphics = bg.addComponent(Graphics);
-        bg.addComponent(UITransform).setContentSize(800, 800);
-        graphics.fillColor = new Color(0, 0, 0, 180);
-        graphics.rect(-400, -400, 800, 800);
-        graphics.fill();
-        overlay.addChild(bg);
-
-        // 结果文字
-        const title = this.createLabel(win ? '🎉 过关！' : '😢 失败', 0, 100, 50);
-        overlay.addChild(title);
-
-        const scoreText = this.createLabel(`得分: ${this.score}`, 0, 20, 30);
-        overlay.addChild(scoreText);
-
-        if (win) {
-            const nextBtn = this.createButton('下一关', 0, -80, 150, 50, () => {
-                overlay.destroy();
-                if (this.currentLevel < LEVELS.length) {
-                    this.startLevel(this.currentLevel + 1);
-                } else {
-                    this.showMainMenu();
-                }
-            });
-            overlay.addChild(nextBtn);
-        }
-
-        const retryBtn = this.createButton('重试', win ? -100 : 0, win ? -150 : -80, 120, 50, () => {
-            overlay.destroy();
-            this.startLevel(this.currentLevel);
-        });
-        overlay.addChild(retryBtn);
-
-        const menuBtn = this.createButton('菜单', win ? 100 : 0, win ? -150 : -150, 120, 50, () => {
-            overlay.destroy();
-            this.showMainMenu();
-        });
-        overlay.addChild(menuBtn);
+    showInfo(text: string) {
+        // 简单的信息提示
+        console.log(text);
     }
 
     // =================== 存档 ===================
-    saveProgress(level: number) {
+
+    saveProgress() {
         try {
-            if (typeof localStorage !== 'undefined') {
-                const current = parseInt(localStorage.getItem('match3_level') || '1');
-                if (level > current) {
-                    localStorage.setItem('match3_level', level.toString());
-                }
+            if (typeof localStorage === 'undefined') return;
+            localStorage.setItem('match3_unlocked', this.unlockedLevel.toString());
+            localStorage.setItem('match3_stars', JSON.stringify(this.levelStars));
+        } catch (e) {}
+    }
+
+    loadProgress() {
+        try {
+            if (typeof localStorage === 'undefined') return;
+            this.unlockedLevel = parseInt(localStorage.getItem('match3_unlocked') || '1');
+            const starsJson = localStorage.getItem('match3_stars');
+            if (starsJson) {
+                this.levelStars = JSON.parse(starsJson);
             }
         } catch (e) {
-            console.log('保存失败');
+            this.unlockedLevel = 1;
+            this.levelStars = [];
         }
     }
 
-    loadProgress(): number {
-        try {
-            if (typeof localStorage !== 'undefined') {
-                return parseInt(localStorage.getItem('match3_level') || '1');
-            }
-        } catch (e) {}
-        return 1;
-    }
-
     // =================== 工具方法 ===================
+
     clearAll() {
-        this.menuContainer?.destroy();
-        this.levelSelectContainer?.destroy();
         this.gameContainer?.destroy();
-        this.menuContainer = null;
-        this.levelSelectContainer = null;
         this.gameContainer = null;
         this.gridContainer = null;
-        this.toolsContainer = null;
     }
 
     createLabel(text: string, x: number, y: number, fontSize: number): Node {
@@ -847,13 +954,14 @@ export class Match3Game extends Component {
         node.layer = this.node.layer;
         const transform = node.addComponent(UITransform);
         transform.setContentSize(width, height);
-        
+
         const graphics = node.addComponent(Graphics);
-        graphics.fillColor = new Color(80, 150, 255, 230);
+        graphics.fillColor = new Color(255, 230, 109, 230);
         graphics.roundRect(-width/2, -height/2, width, height, 10);
         graphics.fill();
 
-        const labelNode = this.createLabel(text, 0, 0, 22);
+        const labelNode = this.createLabel(text, 0, 0, 16);
+        labelNode.getComponent(Label)!.color = new Color(44, 62, 80);
         node.addChild(labelNode);
 
         node.setPosition(x, y, 0);
