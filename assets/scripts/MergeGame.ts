@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Label, UITransform, Color, Size, Vec3, tween, Graphics } from 'cc';
+import { _decorator, Component, Node, Label, UITransform, Color, Size, Vec3, tween, Graphics, director } from 'cc';
 const { ccclass, property } = _decorator;
 
 /**
@@ -112,7 +112,7 @@ export class MergeGame extends Component {
         // 返回按钮
         const backBtn = this.createButton('返回', -280, 300, 80, 40, () => {
             this.saveGame();
-            this.showMainMenu();
+            director.loadScene('MainMenu');
         });
         this.gameContainer.addChild(backBtn);
 

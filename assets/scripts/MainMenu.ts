@@ -140,12 +140,7 @@ export class MainMenu extends Component {
 
     openGame(scene: string) {
         console.log(`打开游戏: ${scene}`);
-        
-        // 在实际项目中，这里应该切换场景
-        // director.loadScene(scene);
-        
-        // 临时：显示提示
-        this.showNotice(`正在打开 ${scene}...`);
+        director.loadScene(scene);
     }
 
     showNotice(text: string) {

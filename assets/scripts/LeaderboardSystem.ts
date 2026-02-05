@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Label, UITransform, Color, Vec3, tween, Graphics } from 'cc';
+import { _decorator, Component, Node, Label, UITransform, Color, Vec3, tween, Graphics, director } from 'cc';
 const { ccclass, property } = _decorator;
 
 /**
@@ -58,7 +58,7 @@ export class LeaderboardSystem extends Component {
 
         // 返回按钮
         const backBtn = this.createButton('返回', 0, -350, 120, 50, () => {
-            // 返回主菜单
+            director.loadScene('MainMenu');
         });
         this.container.addChild(backBtn);
     }
