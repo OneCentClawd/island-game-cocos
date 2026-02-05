@@ -505,7 +505,10 @@ export class MergeGame extends Component {
         // 创建物品（先在仓库位置）
         const item = this.spawnItemAtPosition(drop, empty.x, empty.y, warehouse.gridX, warehouse.gridY);
         if (item) {
-            // 从仓库弹出动画 - 丝滑抛物线
+            // 仓库抖动反馈
+            this.shakeWarehouse(warehouse);
+            
+            // 从仓库弹出动画 - 优雅抛物线 + 旋转 + 弹跳
             const warehouseX = warehouse.gridX * CELL_SIZE + CELL_SIZE / 2;
             const warehouseY = warehouse.gridY * CELL_SIZE + CELL_SIZE / 2;
             const targetX = empty.x * CELL_SIZE + CELL_SIZE / 2;
@@ -513,46 +516,168 @@ export class MergeGame extends Component {
             
             // 先放在仓库位置，缩小状态
             item.node.setPosition(warehouseX, warehouseY, 0);
-            item.node.setScale(new Vec3(0.5, 0.5, 1));
+            item.node.setScale(new Vec3(0.3, 0.3, 1));
+            item.node.angle = 0;
             
-            // 抛物线动画参数
-            const duration = 0.4;
-            const peakHeight = 100;  // 抛物线最高点
+            // 动画参数
+            const flyDuration = 0.45;      // 飞行时间
+            const bounceDuration = 0.25;   // 弹跳时间
+            const peakHeight = 120;        // 抛物线最高点
+            const rotations = 1.5;         // 旋转圈数
             let elapsed = 0;
+            let phase = 'fly';             // 'fly' | 'bounce'
+            let bounceElapsed = 0;
             
-            // 使用 schedule 实现抛物线轨迹
-            const updateParabola = (dt: number) => {
-                elapsed += dt;
-                const t = Math.min(elapsed / duration, 1);
+            // 缓动函数 - easeOutQuad
+            const easeOutQuad = (t: number) => 1 - (1 - t) * (1 - t);
+            
+            // 缓动函数 - easeOutElastic (弹跳)
+            const easeOutElastic = (t: number) => {
+                if (t === 0 || t === 1) return t;
+                return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI) / 3) + 1;
+            };
+            
+            // 创建拖尾粒子
+            const createTrailParticle = (x: number, y: number) => {
+                const particle = new Node('Particle');
+                particle.layer = this.node.layer;
+                const pLabel = particle.addComponent(Label);
+                pLabel.string = '✨';
+                pLabel.fontSize = 16;
+                pLabel.color = new Color(255, 215, 0);
+                particle.addComponent(UITransform);
+                particle.setPosition(x, y, 0);
+                particle.setScale(new Vec3(0.8, 0.8, 1));
+                this.gridContainer?.addChild(particle);
                 
-                // X 方向线性移动
-                const x = warehouseX + (targetX - warehouseX) * t;
-                
-                // Y 方向抛物线：y = 起点 + 水平位移 + 抛物线偏移
-                // 抛物线公式：-4h * t * (t-1)，其中 h 是最高点高度
-                const parabola = -4 * peakHeight * t * (t - 1);
-                const baseY = warehouseY + (targetY - warehouseY) * t;
-                const y = baseY + parabola;
-                
-                // 缩放：从0.5渐变到1
-                const scale = 0.5 + 0.5 * t;
-                
-                item.node.setPosition(x, y, 0);
-                item.node.setScale(new Vec3(scale, scale, 1));
-                
-                // 动画结束
-                if (t >= 1) {
-                    this.unschedule(updateParabola);
-                    item.node.setPosition(targetX, targetY, 0);
-                    item.node.setScale(new Vec3(1, 1, 1));
+                // 粒子动画：飘散消失
+                tween(particle)
+                    .to(0.4, { 
+                        scale: new Vec3(0, 0, 1),
+                        position: new Vec3(x + (Math.random() - 0.5) * 30, y - 20, 0)
+                    })
+                    .call(() => particle.destroy())
+                    .start();
+            };
+            
+            let lastParticleTime = 0;
+            
+            // 主动画循环
+            const updateAnimation = (dt: number) => {
+                if (phase === 'fly') {
+                    elapsed += dt;
+                    const rawT = Math.min(elapsed / flyDuration, 1);
+                    const t = easeOutQuad(rawT);  // 缓动
+                    
+                    // X 方向移动
+                    const x = warehouseX + (targetX - warehouseX) * t;
+                    
+                    // Y 方向抛物线
+                    const parabola = -4 * peakHeight * rawT * (rawT - 1);
+                    const baseY = warehouseY + (targetY - warehouseY) * t;
+                    const y = baseY + parabola;
+                    
+                    // 缩放：从0.3渐变到1.1（稍微过冲）
+                    const scale = 0.3 + 0.8 * t;
+                    
+                    // 旋转
+                    const angle = rawT * 360 * rotations;
+                    
+                    item.node.setPosition(x, y, 0);
+                    item.node.setScale(new Vec3(scale, scale, 1));
+                    item.node.angle = angle;
+                    
+                    // 拖尾粒子（每0.05秒一个）
+                    if (elapsed - lastParticleTime > 0.06 && rawT < 0.9) {
+                        createTrailParticle(x, y);
+                        lastParticleTime = elapsed;
+                    }
+                    
+                    // 飞行结束，进入弹跳阶段
+                    if (rawT >= 1) {
+                        phase = 'bounce';
+                        bounceElapsed = 0;
+                        item.node.angle = 0;  // 重置旋转
+                    }
+                    
+                } else if (phase === 'bounce') {
+                    bounceElapsed += dt;
+                    const t = Math.min(bounceElapsed / bounceDuration, 1);
+                    const bounce = easeOutElastic(t);
+                    
+                    // 弹跳缩放：从1.1到1，有弹性
+                    const scale = 1.1 - 0.1 * bounce;
+                    
+                    // Y方向微弹
+                    const bounceY = targetY + (1 - bounce) * 15;
+                    
+                    item.node.setPosition(targetX, bounceY, 0);
+                    item.node.setScale(new Vec3(scale, scale, 1));
+                    
+                    // 弹跳结束
+                    if (t >= 1) {
+                        this.unschedule(updateAnimation);
+                        item.node.setPosition(targetX, targetY, 0);
+                        item.node.setScale(new Vec3(1, 1, 1));
+                        item.node.angle = 0;
+                        
+                        // 落地星星特效
+                        this.createLandingEffect(targetX, targetY);
+                    }
                 }
             };
             
-            this.schedule(updateParabola, 0);
+            this.schedule(updateAnimation, 0);
         }
         
         this.showInfo(`获得了 ${ITEMS[drop].emoji} ${ITEMS[drop].name}！`);
         this.saveGame();
+    }
+    
+    // 仓库抖动效果
+    shakeWarehouse(warehouse: MergeItem) {
+        const originalX = warehouse.gridX * CELL_SIZE + CELL_SIZE / 2;
+        const originalY = warehouse.gridY * CELL_SIZE + CELL_SIZE / 2;
+        
+        tween(warehouse.node)
+            .to(0.05, { position: new Vec3(originalX - 3, originalY + 5, 0), scale: new Vec3(1.1, 0.9, 1) })
+            .to(0.05, { position: new Vec3(originalX + 3, originalY - 2, 0), scale: new Vec3(0.95, 1.05, 1) })
+            .to(0.05, { position: new Vec3(originalX - 2, originalY + 2, 0), scale: new Vec3(1.05, 0.98, 1) })
+            .to(0.05, { position: new Vec3(originalX, originalY, 0), scale: new Vec3(1, 1, 1) })
+            .start();
+    }
+    
+    // 落地星星特效
+    createLandingEffect(x: number, y: number) {
+        const emojis = ['✨', '⭐', '💫'];
+        for (let i = 0; i < 6; i++) {
+            const particle = new Node('LandEffect');
+            particle.layer = this.node.layer;
+            const pLabel = particle.addComponent(Label);
+            pLabel.string = emojis[i % emojis.length];
+            pLabel.fontSize = 14;
+            particle.addComponent(UITransform);
+            
+            const angle = (i / 6) * Math.PI * 2;
+            const radius = 8;
+            particle.setPosition(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius, 0);
+            particle.setScale(new Vec3(0.5, 0.5, 1));
+            this.gridContainer?.addChild(particle);
+            
+            // 向外扩散消失
+            const targetRadius = 35 + Math.random() * 15;
+            tween(particle)
+                .to(0.35, {
+                    position: new Vec3(
+                        x + Math.cos(angle) * targetRadius,
+                        y + Math.sin(angle) * targetRadius,
+                        0
+                    ),
+                    scale: new Vec3(0, 0, 1)
+                })
+                .call(() => particle.destroy())
+                .start();
+        }
     }
 
     // 在指定位置生成物品（用于动画，初始位置可不同）
