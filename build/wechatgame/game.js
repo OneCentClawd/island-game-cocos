@@ -30,8 +30,13 @@ if (canvas){
     canvas.width = _w;
     canvas.height = _h;
 }
-// Adjust initial canvas size
-if (canvas && window.devicePixelRatio >= 2) {canvas.width *= info.devicePixelRatio; canvas.height *= info.devicePixelRatio;}
+// Adjust initial canvas size for high DPI
+// 使用设备像素比来提升渲染清晰度
+const dpr = info.pixelRatio || info.devicePixelRatio || 1;
+if (canvas && dpr > 1) {
+    canvas.width *= dpr;
+    canvas.height *= dpr;
+}
 
 const importMap = require("src/import-map.js").default;
 System.warmup({
