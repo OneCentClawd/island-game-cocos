@@ -2,24 +2,24 @@ import { _decorator, Component, Node, Label, UITransform, Color, Size, Vec3, twe
 const { ccclass, property } = _decorator;
 
 /**
- * 消消乐元素类型
+ * 消消乐元素类型 - 复刻 weapp 版
  */
-const MATCH3_TYPES = ['wood', 'stone', 'coin', 'star', 'heart', 'diamond'];
+const MATCH3_TYPES = ['ball', 'star', 'diamond', 'heart', 'coin', 'tree'];
 const MATCH3_EMOJIS: {[key: string]: string} = {
-    wood: '🌲',
-    stone: '⚪',
-    coin: '💰',
+    ball: '⚪',
     star: '⭐',
-    heart: '❤️',
     diamond: '💎',
+    heart: '❤️',
+    coin: '💰',
+    tree: '🎄',
 };
 const MATCH3_COLORS: {[key: string]: Color} = {
-    wood: new Color(139, 69, 19),
-    stone: new Color(128, 128, 128),
-    coin: new Color(255, 215, 0),
-    star: new Color(255, 230, 109),
-    heart: new Color(255, 107, 107),
-    diamond: new Color(78, 205, 196),
+    ball: new Color(180, 180, 180),    // 灰色
+    star: new Color(255, 220, 100),    // 黄色
+    diamond: new Color(100, 200, 200), // 青色
+    heart: new Color(255, 120, 140),   // 粉红色
+    coin: new Color(255, 220, 100),    // 黄色
+    tree: new Color(139, 90, 43),      // 棕色
 };
 
 /**
@@ -53,8 +53,8 @@ const MATCH3_LEVELS = [
 ];
 
 const GRID_COLS = 8;
-const GRID_ROWS = 8;
-const TILE_SIZE = 45;
+const GRID_ROWS = 9;
+const TILE_SIZE = 75;
 
 interface Tile {
     node: Node;
@@ -251,12 +251,12 @@ export class Match3Game extends Component {
         this.gameContainer.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         this.node.addChild(this.gameContainer);
 
-        // 背景
+        // 背景 - 深灰蓝色
         const bg = new Node('Background');
         bg.layer = this.node.layer;
         const graphics = bg.addComponent(Graphics);
         bg.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
-        graphics.fillColor = new Color(44, 62, 80);
+        graphics.fillColor = new Color(50, 60, 75);
         graphics.rect(-this.screenWidth/2, -this.screenHeight/2, this.screenWidth, this.screenHeight);
         graphics.fill();
         this.gameContainer.addChild(bg);
@@ -266,85 +266,122 @@ export class Match3Game extends Component {
 
         // 棋盘容器
         this.drawGridContainer();
-
-        // 底部按钮
-        const backBtn = this.createButton('← 退出', -120, -this.screenHeight/2 + 100, 100, 45, () => {
-            this.showLevelSelect();
-        });
-        this.gameContainer.addChild(backBtn);
-
-        const restartBtn = this.createButton('🔄 重玩', 120, -this.screenHeight/2 + 100, 100, 45, () => {
-            this.startLevel(this.level);
-        });
-        this.gameContainer.addChild(restartBtn);
     }
 
     drawTopBar() {
-        const bar = new Node('TopBar');
-        bar.layer = this.node.layer;
-        const graphics = bar.addComponent(Graphics);
-        bar.addComponent(UITransform).setContentSize(380, 80);
-        bar.setPosition(0, this.screenHeight/2 - 100, 0);
+        const topY = this.screenHeight/2 - 80;
         
-        graphics.fillColor = new Color(0, 0, 0, 180);
-        graphics.roundRect(-190, -40, 380, 80, 12);
-        graphics.fill();
+        // 返回按钮
+        const backBtn = new Node('BackBtn');
+        backBtn.layer = this.node.layer;
+        backBtn.addComponent(UITransform).setContentSize(80, 40);
         
-        this.gameContainer?.addChild(bar);
-
-        // 关卡
-        const levelLabel = this.createLabel(`第 ${this.level} 关`, 0, 20, 18);
-        bar.addChild(levelLabel);
-
-        // 分数
-        const scoreNode = this.createLabel(`分数: ${this.score}`, -100, -15, 16);
-        this.scoreLabel = scoreNode.getComponent(Label);
-        bar.addChild(scoreNode);
-
-        // 步数
-        const movesNode = this.createLabel(`步数: ${this.moves}`, 100, -15, 16);
-        this.movesLabel = movesNode.getComponent(Label);
-        bar.addChild(movesNode);
-
-        // 目标
-        if (this.levelConfig) {
-            let targetText = `目标: ${this.levelConfig.target.score}分`;
-            if (this.levelConfig.target.ice) targetText += ` ❄️${this.levelConfig.target.ice}`;
-            if (this.levelConfig.target.stone) targetText += ` 🪨${this.levelConfig.target.stone}`;
-            if (this.levelConfig.target.chain) targetText += ` ⛓️${this.levelConfig.target.chain}`;
-            
-            const targetNode = this.createLabel(targetText, 0, 260, 14);
-            this.targetLabel = targetNode.getComponent(Label);
-            this.gameContainer?.addChild(targetNode);
+        const backGfx = backBtn.addComponent(Graphics);
+        backGfx.fillColor = new Color(255, 255, 255, 230);
+        backGfx.roundRect(-40, -20, 80, 40, 20);
+        backGfx.fill();
+        
+        const backLabel = this.createLabel('返回', 0, 0, 16);
+        backLabel.getComponent(Label)!.color = new Color(60, 80, 100);
+        backBtn.addChild(backLabel);
+        
+        backBtn.setPosition(-this.screenWidth/2 + 60, topY, 0);
+        backBtn.on(Node.EventType.TOUCH_END, () => {
+            this.showLevelSelect();
+        }, this);
+        this.gameContainer?.addChild(backBtn);
+        
+        // 关卡标题
+        const levelLabel = this.createLabel(`第 ${this.level} 关`, 0, topY, 26);
+        this.gameContainer?.addChild(levelLabel);
+        
+        // 三颗星星指示
+        const starsY = topY - 35;
+        const starSpacing = 80;
+        for (let i = 0; i < 3; i++) {
+            const starX = (i - 1) * starSpacing;
+            const starLabel = this.createLabel('⭐', starX, starsY, 24);
+            starLabel.getComponent(Label)!.color = new Color(255, 200, 50);
+            this.gameContainer?.addChild(starLabel);
         }
+        
+        // 分数进度条背景
+        const barY = starsY - 35;
+        const barW = this.screenWidth - 80;
+        const barH = 20;
+        
+        const barBg = new Node('ScoreBarBg');
+        barBg.layer = this.node.layer;
+        const barBgGfx = barBg.addComponent(Graphics);
+        barBg.addComponent(UITransform).setContentSize(barW, barH);
+        barBgGfx.fillColor = new Color(80, 90, 100);
+        barBgGfx.roundRect(-barW/2, -barH/2, barW, barH, barH/2);
+        barBgGfx.fill();
+        barBg.setPosition(0, barY, 0);
+        this.gameContainer?.addChild(barBg);
+        
+        // 分数进度条填充（初始为0）
+        const barFill = new Node('ScoreBarFill');
+        barFill.layer = this.node.layer;
+        const barFillGfx = barFill.addComponent(Graphics);
+        barFill.addComponent(UITransform).setContentSize(barW, barH);
+        barFill.setPosition(0, barY, 0);
+        this.gameContainer?.addChild(barFill);
+        
+        // 分数文字
+        const targetScore = this.levelConfig?.target.score || 300;
+        const scoreNode = this.createLabel(`${this.score} / ${targetScore}`, 0, barY, 12);
+        this.scoreLabel = scoreNode.getComponent(Label);
+        this.gameContainer?.addChild(scoreNode);
+        
+        // 剩余步数
+        const movesY = barY - 50;
+        const movesNode = this.createLabel(`${this.moves}`, 0, movesY, 48);
+        movesNode.getComponent(Label)!.color = new Color(255, 220, 100);
+        this.movesLabel = movesNode.getComponent(Label);
+        this.gameContainer?.addChild(movesNode);
+        
+        const movesHint = this.createLabel('剩余步数', 0, movesY - 35, 14);
+        movesHint.getComponent(Label)!.color = new Color(150, 160, 170);
+        this.gameContainer?.addChild(movesHint);
     }
 
     drawGridContainer() {
-        const gridW = GRID_COLS * TILE_SIZE;
-        const gridH = GRID_ROWS * TILE_SIZE;
+        const gridW = GRID_COLS * TILE_SIZE + 20;
+        const gridH = GRID_ROWS * TILE_SIZE + 20;
+
+        // 棋盘外框
+        const gridBg = new Node('GridBackground');
+        gridBg.layer = this.node.layer;
+        const bgGfx = gridBg.addComponent(Graphics);
+        gridBg.addComponent(UITransform).setContentSize(gridW, gridH);
+        bgGfx.fillColor = new Color(40, 50, 65);
+        bgGfx.roundRect(-gridW/2, -gridH/2, gridW, gridH, 15);
+        bgGfx.fill();
+        gridBg.setPosition(0, -80, 0);
+        this.gameContainer?.addChild(gridBg);
 
         this.gridContainer = new Node('GridContainer');
         this.gridContainer.layer = this.node.layer;
         const transform = this.gridContainer.addComponent(UITransform);
-        transform.setContentSize(gridW, gridH);
+        transform.setContentSize(GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
         transform.setAnchorPoint(0, 0);
-        this.gridContainer.setPosition(-gridW / 2, -gridH / 2 - 20, 0);
+        this.gridContainer.setPosition(-GRID_COLS * TILE_SIZE / 2, -80 - GRID_ROWS * TILE_SIZE / 2, 0);
         this.gameContainer?.addChild(this.gridContainer);
 
-        // 绘制格子背景
+        // 绘制格子背景（深灰棋盘格）
         const bg = new Node('GridBg');
         bg.layer = this.node.layer;
         const graphics = bg.addComponent(Graphics);
-        bg.addComponent(UITransform).setContentSize(gridW, gridH);
+        bg.addComponent(UITransform).setContentSize(GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
 
         for (let row = 0; row < GRID_ROWS; row++) {
             for (let col = 0; col < GRID_COLS; col++) {
                 const x = col * TILE_SIZE;
                 const y = row * TILE_SIZE;
-                const isLight = (row + col) % 2 === 0;
                 
-                graphics.fillColor = isLight ? new Color(60, 80, 100) : new Color(50, 70, 90);
-                graphics.roundRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2, 6);
+                graphics.fillColor = new Color(35, 45, 55);
+                graphics.roundRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4, 8);
                 graphics.fill();
             }
         }
@@ -429,19 +466,19 @@ export class Match3Game extends Component {
     createTile(row: number, col: number, type: string): Tile {
         const node = new Node(`Tile_${row}_${col}`);
         node.layer = this.node.layer;
-        node.addComponent(UITransform).setContentSize(TILE_SIZE - 4, TILE_SIZE - 4);
+        node.addComponent(UITransform).setContentSize(TILE_SIZE - 6, TILE_SIZE - 6);
 
-        // 背景
+        // 背景 - 圆角方块
         const graphics = node.addComponent(Graphics);
         const color = MATCH3_COLORS[type] || new Color(100, 100, 100);
         graphics.fillColor = color;
-        graphics.roundRect(-(TILE_SIZE-4)/2, -(TILE_SIZE-4)/2, TILE_SIZE - 4, TILE_SIZE - 4, 8);
+        graphics.roundRect(-(TILE_SIZE-6)/2, -(TILE_SIZE-6)/2, TILE_SIZE - 6, TILE_SIZE - 6, 10);
         graphics.fill();
 
-        // emoji
+        // emoji图标
         const label = node.addComponent(Label);
         label.string = MATCH3_EMOJIS[type] || '?';
-        label.fontSize = 28;
+        label.fontSize = 36;
         label.lineHeight = TILE_SIZE;
 
         const x = col * TILE_SIZE + TILE_SIZE / 2;
@@ -905,8 +942,9 @@ export class Match3Game extends Component {
     // =================== UI更新 ===================
 
     updateUI() {
-        if (this.scoreLabel) this.scoreLabel.string = `分数: ${this.score}`;
-        if (this.movesLabel) this.movesLabel.string = `步数: ${this.moves}`;
+        const targetScore = this.levelConfig?.target.score || 300;
+        if (this.scoreLabel) this.scoreLabel.string = `${this.score} / ${targetScore}`;
+        if (this.movesLabel) this.movesLabel.string = `${this.moves}`;
     }
 
     showInfo(text: string) {
