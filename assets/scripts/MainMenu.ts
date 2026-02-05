@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Label, UITransform, Color, Vec3, tween, Graphics, director } from 'cc';
+import { _decorator, Component, Node, Label, UITransform, Color, Vec3, tween, Graphics, director, view } from 'cc';
 const { ccclass, property } = _decorator;
 
 /**
@@ -9,9 +9,19 @@ const { ccclass, property } = _decorator;
 export class MainMenu extends Component {
     private menuContainer: Node | null = null;
     private currentGame: string = '';
+    
+    // 屏幕尺寸
+    private screenWidth: number = 750;
+    private screenHeight: number = 1334;
 
     start() {
         console.log('🏝️ 小岛物语 - 主菜单');
+        
+        // 获取设计分辨率
+        const size = view.getDesignResolutionSize();
+        this.screenWidth = size.width;
+        this.screenHeight = size.height;
+        
         this.showMainMenu();
     }
 
@@ -21,16 +31,16 @@ export class MainMenu extends Component {
 
         this.menuContainer = new Node('MenuContainer');
         this.menuContainer.layer = this.node.layer;
-        this.menuContainer.addComponent(UITransform).setContentSize(800, 800);
+        this.menuContainer.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         this.node.addChild(this.menuContainer);
 
         // 背景渐变
         const bg = new Node('Background');
         bg.layer = this.node.layer;
         const graphics = bg.addComponent(Graphics);
-        bg.addComponent(UITransform).setContentSize(800, 800);
+        bg.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         graphics.fillColor = new Color(76, 205, 196);
-        graphics.rect(-400, -400, 800, 800);
+        graphics.rect(-this.screenWidth/2, -this.screenHeight/2, this.screenWidth, this.screenHeight);
         graphics.fill();
         this.menuContainer.addChild(bg);
 
@@ -70,7 +80,7 @@ export class MainMenu extends Component {
         });
 
         // 底部版本号
-        const version = this.createLabel('v0.3.1', 0, -380, 14);
+        const version = this.createLabel('v0.3.1', 0, -this.screenHeight/2 + 50, 14);
         version.getComponent(Label)!.color = new Color(255, 255, 255, 150);
         this.menuContainer.addChild(version);
 

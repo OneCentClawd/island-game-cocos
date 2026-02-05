@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Label, UITransform, Color, Size, Vec3, tween, Graphics, director } from 'cc';
+import { _decorator, Component, Node, Label, UITransform, Color, Size, Vec3, tween, Graphics, director, view } from 'cc';
 const { ccclass, property } = _decorator;
 
 /**
@@ -115,8 +115,18 @@ export class Match3Game extends Component {
     // 当前场景
     private currentScene: 'levelSelect' | 'game' = 'levelSelect';
 
+    // 屏幕尺寸
+    private screenWidth: number = 750;
+    private screenHeight: number = 1334;
+
     start() {
         console.log('🧩 消消乐 - 完整版');
+        
+        // 获取设计分辨率
+        const size = view.getDesignResolutionSize();
+        this.screenWidth = size.width;
+        this.screenHeight = size.height;
+        
         this.loadProgress();
         this.showLevelSelect();
     }
@@ -129,21 +139,21 @@ export class Match3Game extends Component {
 
         this.gameContainer = new Node('LevelSelect');
         this.gameContainer.layer = this.node.layer;
-        this.gameContainer.addComponent(UITransform).setContentSize(800, 800);
+        this.gameContainer.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         this.node.addChild(this.gameContainer);
 
         // 背景
         const bg = new Node('Background');
         bg.layer = this.node.layer;
         const graphics = bg.addComponent(Graphics);
-        bg.addComponent(UITransform).setContentSize(800, 800);
+        bg.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         graphics.fillColor = new Color(78, 205, 196);
-        graphics.rect(-400, -400, 800, 800);
+        graphics.rect(-this.screenWidth/2, -this.screenHeight/2, this.screenWidth, this.screenHeight);
         graphics.fill();
         this.gameContainer.addChild(bg);
 
         // 标题
-        const title = this.createLabel('🧩 消消乐', 0, 320, 36);
+        const title = this.createLabel('🧩 消消乐', 0, this.screenHeight/2 - 100, 36);
         this.gameContainer.addChild(title);
 
         // 关卡网格
@@ -168,7 +178,7 @@ export class Match3Game extends Component {
         }
 
         // 返回按钮
-        const backBtn = this.createButton('← 返回', 0, -320, 120, 50, () => {
+        const backBtn = this.createButton('← 返回', 0, -this.screenHeight/2 + 100, 120, 50, () => {
             director.loadScene('MainMenu');
         });
         this.gameContainer.addChild(backBtn);
@@ -238,16 +248,16 @@ export class Match3Game extends Component {
     initGameUI() {
         this.gameContainer = new Node('GameContainer');
         this.gameContainer.layer = this.node.layer;
-        this.gameContainer.addComponent(UITransform).setContentSize(800, 800);
+        this.gameContainer.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         this.node.addChild(this.gameContainer);
 
         // 背景
         const bg = new Node('Background');
         bg.layer = this.node.layer;
         const graphics = bg.addComponent(Graphics);
-        bg.addComponent(UITransform).setContentSize(800, 800);
+        bg.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         graphics.fillColor = new Color(44, 62, 80);
-        graphics.rect(-400, -400, 800, 800);
+        graphics.rect(-this.screenWidth/2, -this.screenHeight/2, this.screenWidth, this.screenHeight);
         graphics.fill();
         this.gameContainer.addChild(bg);
 
@@ -258,12 +268,12 @@ export class Match3Game extends Component {
         this.drawGridContainer();
 
         // 底部按钮
-        const backBtn = this.createButton('← 退出', -120, -340, 100, 45, () => {
+        const backBtn = this.createButton('← 退出', -120, -this.screenHeight/2 + 100, 100, 45, () => {
             this.showLevelSelect();
         });
         this.gameContainer.addChild(backBtn);
 
-        const restartBtn = this.createButton('🔄 重玩', 120, -340, 100, 45, () => {
+        const restartBtn = this.createButton('🔄 重玩', 120, -this.screenHeight/2 + 100, 100, 45, () => {
             this.startLevel(this.level);
         });
         this.gameContainer.addChild(restartBtn);
@@ -274,7 +284,7 @@ export class Match3Game extends Component {
         bar.layer = this.node.layer;
         const graphics = bar.addComponent(Graphics);
         bar.addComponent(UITransform).setContentSize(380, 80);
-        bar.setPosition(0, 330, 0);
+        bar.setPosition(0, this.screenHeight/2 - 100, 0);
         
         graphics.fillColor = new Color(0, 0, 0, 180);
         graphics.roundRect(-190, -40, 380, 80, 12);
