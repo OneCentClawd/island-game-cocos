@@ -505,7 +505,7 @@ export class MergeGame extends Component {
         // 创建物品（先在仓库位置）
         const item = this.spawnItemAtPosition(drop, empty.x, empty.y, warehouse.gridX, warehouse.gridY);
         if (item) {
-            // 从仓库弹出动画
+            // 从仓库弹出动画 - 丝滑抛物线
             const warehouseX = warehouse.gridX * CELL_SIZE + CELL_SIZE / 2;
             const warehouseY = warehouse.gridY * CELL_SIZE + CELL_SIZE / 2;
             const targetX = empty.x * CELL_SIZE + CELL_SIZE / 2;
@@ -513,23 +513,42 @@ export class MergeGame extends Component {
             
             // 先放在仓库位置，缩小状态
             item.node.setPosition(warehouseX, warehouseY, 0);
-            item.node.setScale(new Vec3(0.3, 0.3, 1));
+            item.node.setScale(new Vec3(0.5, 0.5, 1));
             
-            // 弹出动画：先往上跳，再落到目标位置
-            const jumpHeight = 80;
-            const midX = (warehouseX + targetX) / 2;
-            const midY = Math.max(warehouseY, targetY) + jumpHeight;
+            // 抛物线动画参数
+            const duration = 0.4;
+            const peakHeight = 100;  // 抛物线最高点
+            let elapsed = 0;
             
-            tween(item.node)
-                .to(0.15, { 
-                    position: new Vec3(midX, midY, 0),
-                    scale: new Vec3(1.2, 1.2, 1)
-                }, { easing: 'quadOut' })
-                .to(0.2, { 
-                    position: new Vec3(targetX, targetY, 0),
-                    scale: new Vec3(1, 1, 1)
-                }, { easing: 'bounceOut' })
-                .start();
+            // 使用 schedule 实现抛物线轨迹
+            const updateParabola = (dt: number) => {
+                elapsed += dt;
+                const t = Math.min(elapsed / duration, 1);
+                
+                // X 方向线性移动
+                const x = warehouseX + (targetX - warehouseX) * t;
+                
+                // Y 方向抛物线：y = 起点 + 水平位移 + 抛物线偏移
+                // 抛物线公式：-4h * t * (t-1)，其中 h 是最高点高度
+                const parabola = -4 * peakHeight * t * (t - 1);
+                const baseY = warehouseY + (targetY - warehouseY) * t;
+                const y = baseY + parabola;
+                
+                // 缩放：从0.5渐变到1
+                const scale = 0.5 + 0.5 * t;
+                
+                item.node.setPosition(x, y, 0);
+                item.node.setScale(new Vec3(scale, scale, 1));
+                
+                // 动画结束
+                if (t >= 1) {
+                    this.unschedule(updateParabola);
+                    item.node.setPosition(targetX, targetY, 0);
+                    item.node.setScale(new Vec3(1, 1, 1));
+                }
+            };
+            
+            this.schedule(updateParabola, 0);
         }
         
         this.showInfo(`获得了 ${ITEMS[drop].emoji} ${ITEMS[drop].name}！`);
