@@ -551,6 +551,9 @@ export class MergeGame extends Component {
             return;
         }
         
+        // 消耗体力
+        if (!this.consumeEnergy(1)) return;
+        
         // 消耗物品
         for (const need of shopper.needs) {
             this.consumeItems(need.key, need.count);
@@ -568,7 +571,7 @@ export class MergeGame extends Component {
         }
         
         this.drawShoppers();
-        this.showInfo(`🎉 ${shopper.emoji} 满意离开！+💰${shopper.reward.coin}`);
+        this.showInfo(`🎉 -1⚡ ${shopper.emoji} 满意离开！+💰${shopper.reward.coin}`);
         this.saveGame();
     }
 
@@ -712,11 +715,28 @@ export class MergeGame extends Component {
         this.saveGame();
     }
 
+    // =================== 体力系统 ===================
+    consumeEnergy(amount: number = 1): boolean {
+        if (this.energy < amount) {
+            this.showInfo(`⚡ 体力不足！需要 ${amount}，当前 ${this.energy}`);
+            return false;
+        }
+        this.energy -= amount;
+        this.updateResourceUI();
+        return true;
+    }
+
     // =================== 仓库系统 ===================
     onWarehouseClick(warehouse: MergeItem) {
+        // 消耗体力
+        if (!this.consumeEnergy(1)) return;
+        
         const empty = this.findEmptyCell();
         if (!empty) {
             this.showInfo('没有空位了！');
+            // 退还体力
+            this.energy += 1;
+            this.updateResourceUI();
             return;
         }
 
@@ -727,7 +747,7 @@ export class MergeGame extends Component {
         this.shakeWarehouse(warehouse);
         
         if (item) {
-            this.showInfo(`获得 ${ITEMS[drop].emoji} ${ITEMS[drop].name}！`);
+            this.showInfo(`-1⚡ 获得 ${ITEMS[drop].emoji} ${ITEMS[drop].name}！`);
         }
         this.saveGame();
     }
@@ -822,6 +842,12 @@ export class MergeGame extends Component {
         const mergeInto = item1.config.mergeInto;
         if (!mergeInto) return;
         
+        // 消耗体力
+        if (!this.consumeEnergy(1)) {
+            this.returnToOriginal(item1);
+            return;
+        }
+        
         const targetX = item2.gridX;
         const targetY = item2.gridY;
         
@@ -829,7 +855,7 @@ export class MergeGame extends Component {
         this.removeItem(item2);
         
         this.spawnItem(mergeInto, targetX, targetY);
-        this.showInfo(`✨ 合成了 ${ITEMS[mergeInto].emoji} ${ITEMS[mergeInto].name}！`);
+        this.showInfo(`-1⚡ 合成了 ${ITEMS[mergeInto].emoji} ${ITEMS[mergeInto].name}！`);
         this.drawShoppers();
     }
     
