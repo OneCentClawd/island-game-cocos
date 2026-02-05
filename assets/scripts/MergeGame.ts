@@ -170,17 +170,15 @@ export class MergeGame extends Component {
     private infoLabel: Label | null = null;
     private gameContainer: Node | null = null;
 
-    // 屏幕尺寸
+    // 屏幕尺寸（使用固定设计尺寸，适配手机）
     private screenWidth: number = 750;
     private screenHeight: number = 1334;
 
     start() {
         console.log('🔮 合成游戏 - 完整版');
         
-        // 获取设计分辨率
-        const designSize = view.getDesignResolutionSize();
-        this.screenWidth = designSize.width;
-        this.screenHeight = designSize.height;
+        // 使用固定设计分辨率（适配手机竖屏）
+        // 不使用 view.getDesignResolutionSize() 因为可能返回不正确的值
         
         this.loadGame();
         this.initGame();
@@ -225,7 +223,7 @@ export class MergeGame extends Component {
         // 初始化购物者
         this.initShoppers();
 
-        this.showInfo('点击仓库获取物品，完成购物者📋获得奖励！');
+        this.showInfo('点击仓库获取物品，完成订单获得奖励！');
     }
 
     drawBackground() {
@@ -243,33 +241,33 @@ export class MergeGame extends Component {
     }
 
     drawResourceBar() {
-        // 顶部资源栏 - 放在屏幕顶部
-        const topY = this.screenHeight / 2 - 60;
+        // 顶部资源栏 - 放在屏幕顶部（留出安全区）
+        const topY = this.screenHeight / 2 - 80;
         
         const bar = new Node('ResourceBar');
         bar.layer = this.node.layer;
         const graphics = bar.addComponent(Graphics);
-        bar.addComponent(UITransform).setContentSize(380, 50);
-        bar.setPosition(0, topY, 0);
+        bar.addComponent(UITransform).setContentSize(400, 60);
+        bar.setPosition(40, topY, 0);
         
         graphics.fillColor = new Color(0, 0, 0, 150);
-        graphics.roundRect(-190, -25, 380, 50, 12);
+        graphics.roundRect(-200, -30, 400, 60, 15);
         graphics.fill();
         
         this.gameContainer?.addChild(bar);
 
         // 💰币
-        const coinsNode = this.createLabel(`💰 ${this.coins}`, -80, 0, 22);
+        const coinsNode = this.createLabel(`💰 ${this.coins}`, -80, 0, 26);
         this.coinsLabel = coinsNode.getComponent(Label);
         bar.addChild(coinsNode);
 
         // 💎石
-        const diamondsNode = this.createLabel(`💎 ${this.diamonds}`, 80, 0, 22);
+        const diamondsNode = this.createLabel(`💎 ${this.diamonds}`, 80, 0, 26);
         this.diamondsLabel = diamondsNode.getComponent(Label);
         bar.addChild(diamondsNode);
 
         // 返回按钮
-        const backBtn = this.createButton('←', -this.screenWidth/2 + 50, topY, 50, 40, () => {
+        const backBtn = this.createButton('←', -this.screenWidth/2 + 60, topY, 60, 50, () => {
             this.saveGame();
             director.loadScene('MainMenu');
         });
@@ -278,24 +276,24 @@ export class MergeGame extends Component {
 
     drawShopperArea() {
         // 购物者区域 - 在资源栏下方
-        const topY = this.screenHeight / 2 - 150;
+        const topY = this.screenHeight / 2 - 200;
         
         this.shopperContainer = new Node('ShopperArea');
         this.shopperContainer.layer = this.node.layer;
-        this.shopperContainer.addComponent(UITransform).setContentSize(380, 100);
+        this.shopperContainer.addComponent(UITransform).setContentSize(700, 120);
         this.shopperContainer.setPosition(0, topY, 0);
         this.gameContainer?.addChild(this.shopperContainer);
 
         // 标题
-        const title = this.createLabel('📋 订单', 0, 40, 18);
+        const title = this.createLabel('📋 订单', 0, 50, 20);
         this.shopperContainer.addChild(title);
     }
 
     drawGrid() {
-        // 棋盘 - 居中偏上
+        // 棋盘 - 居中（在购物者和底部按钮之间）
         const gridW = GRID_COLS * CELL_SIZE;
         const gridH = GRID_ROWS * CELL_SIZE;
-        const gridY = 50;  // 稍微偏上一点
+        const gridY = -50;  // 居中稍偏下
         
         this.gridContainer = new Node('GridContainer');
         this.gridContainer.layer = this.node.layer;
@@ -326,26 +324,26 @@ export class MergeGame extends Component {
     }
 
     drawBottomButtons() {
-        // 底部按钮 - 放在屏幕底部
-        const btnY = -this.screenHeight / 2 + 80;
+        // 底部按钮 - 放在屏幕底部（留出安全区）
+        const btnY = -this.screenHeight / 2 + 120;
 
         // 收集💰币按钮
-        const collectBtn = this.createButton('💰 收集', -100, btnY, 120, 50, () => {
+        const collectBtn = this.createButton('💰 收集', -120, btnY, 140, 60, () => {
             this.collectCoins();
         });
         this.gameContainer?.addChild(collectBtn);
 
         // 刷新购物者按钮
-        const refreshBtn = this.createButton('🔄 刷新订单', 100, btnY, 140, 50, () => {
+        const refreshBtn = this.createButton('🔄 刷新订单', 120, btnY, 160, 60, () => {
             this.refreshShoppers();
         });
         this.gameContainer?.addChild(refreshBtn);
     }
 
     drawInfoBar() {
-        // 信息栏 - 在棋盘上方
-        const infoY = this.screenHeight / 2 - 230;
-        const infoNode = this.createLabel('', 0, infoY, 16);
+        // 信息栏 - 在棋盘和购物者之间
+        const infoY = this.screenHeight / 2 - 320;
+        const infoNode = this.createLabel('', 0, infoY, 18);
         this.infoLabel = infoNode.getComponent(Label);
         this.gameContainer?.addChild(infoNode);
     }
