@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Label, UITransform, Color, Vec3, tween, Graphics, director } from 'cc';
+import { _decorator, Component, Node, Label, UITransform, Color, Vec3, tween, Graphics, director, view } from 'cc';
 const { ccclass, property } = _decorator;
 
 /**
@@ -22,9 +22,18 @@ export class DailyTaskSystem extends Component {
     private taskProgress: Map<string, number> = new Map();
     private taskClaimed: Map<string, boolean> = new Map();
     private lastResetDate: string = '';
+    
+    // 屏幕尺寸
+    private screenWidth: number = 750;
+    private screenHeight: number = 1334;
 
     start() {
         console.log('🎯 每日任务系统');
+        
+        const size = view.getDesignResolutionSize();
+        this.screenWidth = size.width;
+        this.screenHeight = size.height;
+        
         this.loadData();
         this.checkReset();
         this.showTasks();
@@ -50,25 +59,25 @@ export class DailyTaskSystem extends Component {
 
         this.container = new Node('Container');
         this.container.layer = this.node.layer;
-        this.container.addComponent(UITransform).setContentSize(800, 800);
+        this.container.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         this.node.addChild(this.container);
 
         // 背景
         const bg = new Node('Bg');
         bg.layer = this.node.layer;
         const graphics = bg.addComponent(Graphics);
-        bg.addComponent(UITransform).setContentSize(800, 800);
+        bg.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         graphics.fillColor = new Color(255, 152, 0);
-        graphics.rect(-400, -400, 800, 800);
+        graphics.rect(-this.screenWidth/2, -this.screenHeight/2, this.screenWidth, this.screenHeight);
         graphics.fill();
         this.container.addChild(bg);
 
         // 标题
-        const title = this.createLabel('🎯 每日任务', 0, 320, 36);
+        const title = this.createLabel('🎯 每日任务', 0, this.screenHeight/2 - 80, 36);
         this.container.addChild(title);
 
         // 任务列表
-        const startY = 220;
+        const startY = this.screenHeight/2 - 180;
         const itemHeight = 80;
 
         DAILY_TASKS.forEach((task, i) => {
@@ -81,7 +90,7 @@ export class DailyTaskSystem extends Component {
         });
 
         // 返回按钮
-        const backBtn = this.createButton('返回', 0, -330, 120, 50, () => {
+        const backBtn = this.createButton('返回', 0, -this.screenHeight/2 + 80, 120, 50, () => {
             director.loadScene('MainMenu');
         });
         this.container.addChild(backBtn);

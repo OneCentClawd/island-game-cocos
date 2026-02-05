@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Label, UITransform, Color, Vec3, tween, Graphics, director } from 'cc';
+import { _decorator, Component, Node, Label, UITransform, Color, Vec3, tween, Graphics, director, view } from 'cc';
 const { ccclass, property } = _decorator;
 
 /**
@@ -8,9 +8,18 @@ const { ccclass, property } = _decorator;
 export class SettingsSystem extends Component {
     private container: Node | null = null;
     private nickname: string = '匿名玩家';
+    
+    // 屏幕尺寸
+    private screenWidth: number = 750;
+    private screenHeight: number = 1334;
 
     start() {
         console.log('⚙️ 设置系统');
+        
+        const size = view.getDesignResolutionSize();
+        this.screenWidth = size.width;
+        this.screenHeight = size.height;
+        
         this.loadSettings();
         this.showSettings();
     }
@@ -20,60 +29,60 @@ export class SettingsSystem extends Component {
 
         this.container = new Node('Container');
         this.container.layer = this.node.layer;
-        this.container.addComponent(UITransform).setContentSize(800, 800);
+        this.container.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         this.node.addChild(this.container);
 
         // 背景
         const bg = new Node('Bg');
         bg.layer = this.node.layer;
         const graphics = bg.addComponent(Graphics);
-        bg.addComponent(UITransform).setContentSize(800, 800);
+        bg.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         graphics.fillColor = new Color(67, 206, 162);
-        graphics.rect(-400, -400, 800, 800);
+        graphics.rect(-this.screenWidth/2, -this.screenHeight/2, this.screenWidth, this.screenHeight);
         graphics.fill();
         this.container.addChild(bg);
 
         // 标题
-        const title = this.createLabel('⚙️ 设置', 0, 300, 36);
+        const title = this.createLabel('⚙️ 设置', 0, this.screenHeight/2 - 100, 36);
         this.container.addChild(title);
 
         // 当前昵称
-        const nicknameLabel = this.createLabel(`当前昵称: ${this.nickname}`, 0, 200, 18);
+        const nicknameLabel = this.createLabel(`当前昵称: ${this.nickname}`, 0, this.screenHeight/2 - 200, 18);
         nicknameLabel.getComponent(Label)!.color = new Color(255, 255, 255, 200);
         this.container.addChild(nicknameLabel);
 
         // 修改昵称按钮
-        const nicknameBtn = this.createSettingButton('✏️ 修改昵称', 0, 130, () => {
+        const nicknameBtn = this.createSettingButton('✏️ 修改昵称', 0, this.screenHeight/2 - 270, () => {
             this.changeNickname();
         });
         this.container.addChild(nicknameBtn);
 
         // 清除缓存按钮
-        const clearBtn = this.createSettingButton('🗑️ 清除缓存', 0, 50, () => {
+        const clearBtn = this.createSettingButton('🗑️ 清除缓存', 0, this.screenHeight/2 - 350, () => {
             this.clearCache();
         });
         this.container.addChild(clearBtn);
 
         // 重置存档按钮
-        const resetBtn = this.createSettingButton('⚠️ 重置存档', 0, -30, () => {
+        const resetBtn = this.createSettingButton('⚠️ 重置存档', 0, this.screenHeight/2 - 430, () => {
             this.resetSave();
         });
         resetBtn.getComponent(Graphics)!.fillColor = new Color(255, 100, 100, 180);
         this.container.addChild(resetBtn);
 
         // 关于
-        const aboutBtn = this.createSettingButton('ℹ️ 关于游戏', 0, -110, () => {
+        const aboutBtn = this.createSettingButton('ℹ️ 关于游戏', 0, this.screenHeight/2 - 510, () => {
             this.showAbout();
         });
         this.container.addChild(aboutBtn);
 
         // 版本号
-        const version = this.createLabel('小岛物语 v0.3.1', 0, -250, 14);
+        const version = this.createLabel('小岛物语 v0.3.1', 0, -this.screenHeight/2 + 150, 14);
         version.getComponent(Label)!.color = new Color(255, 255, 255, 150);
         this.container.addChild(version);
 
         // 返回按钮
-        const backBtn = this.createButton('返回', 0, -320, 120, 50, () => {
+        const backBtn = this.createButton('返回', 0, -this.screenHeight/2 + 80, 120, 50, () => {
             director.loadScene('MainMenu');
         });
         this.container.addChild(backBtn);

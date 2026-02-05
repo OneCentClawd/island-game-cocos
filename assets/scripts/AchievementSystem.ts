@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Label, UITransform, Color, Vec3, tween, Graphics, director } from 'cc';
+import { _decorator, Component, Node, Label, UITransform, Color, Vec3, tween, Graphics, director, view } from 'cc';
 const { ccclass, property } = _decorator;
 
 /**
@@ -24,9 +24,18 @@ export class AchievementSystem extends Component {
     private container: Node | null = null;
     private achievements: Map<string, boolean> = new Map();
     private claimed: Map<string, boolean> = new Map();
+    
+    // 屏幕尺寸
+    private screenWidth: number = 750;
+    private screenHeight: number = 1334;
 
     start() {
         console.log('🏆 成就系统');
+        
+        const size = view.getDesignResolutionSize();
+        this.screenWidth = size.width;
+        this.screenHeight = size.height;
+        
         this.loadData();
         this.showAchievements();
     }
@@ -36,25 +45,25 @@ export class AchievementSystem extends Component {
 
         this.container = new Node('Container');
         this.container.layer = this.node.layer;
-        this.container.addComponent(UITransform).setContentSize(800, 800);
+        this.container.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         this.node.addChild(this.container);
 
         // 背景
         const bg = new Node('Bg');
         bg.layer = this.node.layer;
         const graphics = bg.addComponent(Graphics);
-        bg.addComponent(UITransform).setContentSize(800, 800);
+        bg.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         graphics.fillColor = new Color(102, 126, 234);
-        graphics.rect(-400, -400, 800, 800);
+        graphics.rect(-this.screenWidth/2, -this.screenHeight/2, this.screenWidth, this.screenHeight);
         graphics.fill();
         this.container.addChild(bg);
 
         // 标题
-        const title = this.createLabel('🏆 成就', 0, 320, 36);
+        const title = this.createLabel('🏆 成就', 0, this.screenHeight/2 - 80, 36);
         this.container.addChild(title);
 
         // 成就列表
-        const startY = 240;
+        const startY = this.screenHeight/2 - 160;
         const itemHeight = 70;
 
         ACHIEVEMENTS.forEach((ach, i) => {
@@ -67,7 +76,7 @@ export class AchievementSystem extends Component {
         });
 
         // 返回按钮
-        const backBtn = this.createButton('返回', 0, -350, 120, 50, () => {
+        const backBtn = this.createButton('返回', 0, -this.screenHeight/2 + 80, 120, 50, () => {
             director.loadScene('MainMenu');
         });
         this.container.addChild(backBtn);

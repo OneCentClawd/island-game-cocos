@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Label, UITransform, Color, Vec3, tween, Graphics, director } from 'cc';
+import { _decorator, Component, Node, Label, UITransform, Color, Vec3, tween, Graphics, director, view } from 'cc';
 const { ccclass, property } = _decorator;
 
 /**
@@ -38,9 +38,18 @@ export class ShopSystem extends Component {
     private currentCategory: string = 'tool';
     private coins: number = 0;
     private diamonds: number = 0;
+    
+    // 屏幕尺寸
+    private screenWidth: number = 750;
+    private screenHeight: number = 1334;
 
     start() {
         console.log('🏪 商店系统');
+        
+        const size = view.getDesignResolutionSize();
+        this.screenWidth = size.width;
+        this.screenHeight = size.height;
+        
         this.loadData();
         this.showShop();
     }
@@ -50,28 +59,28 @@ export class ShopSystem extends Component {
 
         this.container = new Node('Container');
         this.container.layer = this.node.layer;
-        this.container.addComponent(UITransform).setContentSize(800, 800);
+        this.container.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         this.node.addChild(this.container);
 
         // 背景
         const bg = new Node('Bg');
         bg.layer = this.node.layer;
         const graphics = bg.addComponent(Graphics);
-        bg.addComponent(UITransform).setContentSize(800, 800);
+        bg.addComponent(UITransform).setContentSize(this.screenWidth, this.screenHeight);
         graphics.fillColor = new Color(233, 30, 99);
-        graphics.rect(-400, -400, 800, 800);
+        graphics.rect(-this.screenWidth/2, -this.screenHeight/2, this.screenWidth, this.screenHeight);
         graphics.fill();
         this.container.addChild(bg);
 
         // 标题
-        const title = this.createLabel('🏪 商店', 0, 330, 36);
+        const title = this.createLabel('🏪 商店', 0, this.screenHeight/2 - 70, 36);
         this.container.addChild(title);
 
         // 资源显示
         const resBar = new Node('ResBar');
         resBar.layer = this.node.layer;
         resBar.addComponent(UITransform).setContentSize(300, 40);
-        resBar.setPosition(0, 280, 0);
+        resBar.setPosition(0, this.screenHeight/2 - 120, 0);
         this.container.addChild(resBar);
 
         const coinsLabel = this.createLabel(`💰 ${this.coins}`, -60, 0, 20);
@@ -87,7 +96,7 @@ export class ShopSystem extends Component {
         this.createItemList();
 
         // 返回按钮
-        const backBtn = this.createButton('返回', 0, -350, 120, 50, () => {
+        const backBtn = this.createButton('返回', 0, -this.screenHeight/2 + 80, 120, 50, () => {
             director.loadScene('MainMenu');
         });
         this.container.addChild(backBtn);
@@ -113,7 +122,7 @@ export class ShopSystem extends Component {
             const label = this.createLabel(cat.name, 0, 0, 16);
             tab.addChild(label);
 
-            tab.setPosition(x, 230, 0);
+            tab.setPosition(x, this.screenHeight/2 - 170, 0);
             tab.on(Node.EventType.TOUCH_END, () => {
                 this.currentCategory = cat.key;
                 this.showShop();
